@@ -3,7 +3,7 @@ classdef saudefense < handle
 properties
     % Constants
     Ts      = 2     % Motor response time
-    OS      = 0.05  % Motor overshoot
+    OS      = 0.10  % Motor overshoot
     
     scale   = 0.1   % scale to window
     W       = 90    % world width
