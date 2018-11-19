@@ -10,13 +10,16 @@ properties
     H       = 160   % world height
     Vr_max  = 5
     v_arm   = 0.5   % max speed allowing fire
-    txt_armed={'disarmed', 'armed'}
-    mark_armed={'o','^'}
+    
+    foe_lambda = 1/4 % Incomings per second (lambda for poisson)
+    
+    txt_armed={'disarmed', 'armed', 'cooling down', 'firing'}
+    mark_armed={'o','^', 'v', '^'}
     
     % Timing
     T       = 1/10  % period
     prev    = tic
-    load    = 0     % CPU use in %1
+    load    = zeros(1, 10)  % CPU use in %1
     load_len= 10      % Samples to avg
     
     G_Gun           % gun's continuous TF
@@ -31,7 +34,15 @@ properties
     x        = 0     % gun position
     vx       = 0     % gun speed
     Vr       = 0     % reference instantaneous manual input  
-    armed    = true
+    armed    = true        
+    firing   = 0     % time left in current firing
+    firing_len = 0.5 % time a firing lasts
+    
+    foes = {}
+    
+    cooldown = 0
+    cooldown_len = 1 % time until next shot ready
+    
     numpad4  = false
     numpad6  = false
     
@@ -79,6 +90,11 @@ methods(Access=public)
             elseif strcmp(eventdata.Key, 'numpad4')
                 this.Vr      = -this.Vr_max;
                 this.numpad4 = true;
+            elseif strcmp(eventdata.Key, 'numpad8')
+                if this.armed
+                    this.firing = this.firing_len;
+                    this.armed  = false;
+                end
             end
         end       
         
@@ -102,6 +118,7 @@ methods(Access=public)
         
         this.window = figure(1);
         this.fig = this.select_world;
+        title('Battlescape')
         set(this.window, 'KeyPressFcn', @keyPress, 'KeyReleaseFcn', @keyRelease);
         
         this.fig_signals = this.select_history;
@@ -116,17 +133,49 @@ methods(Access=public)
     end
     
     function compute(this)
+        
+        % FOES
+        if rand < poisspdf(1, this.foe_lambda*this.T)
+            this.foes{end+1} = foe(this);
+        end
+        
+        i = 1;
+        while i <= numel(this.foes)
+            [alive, hit] = this.foes{i}.update();
+            if ~alive || hit
+                this.foes(i) = [];
+            else 
+                i = i + 1;
+            end
+        end
+        
+        % GUN DYNAMICS & FIRING
         [this.vx, this.Z_Gun] = ...
             filter(this.D_Gun.num{1}', this.D_Gun.den{1}', this.Vr, this.Z_Gun);
-        this.x = this.x + this.vx;
+        this.x = this.x + this.vx;        
         
-        this.armed = abs(this.vx) <= this.v_arm;
+        if this.cooldown > 0
+            this.cooldown = this.cooldown - this.T;
+            if this.cooldown < 0 
+                this.cooldown = 0;
+            end
+        end
+        
+        if this.firing > 0
+            this.firing = this.firing - this.T;
+            if this.firing < 0 
+                this.cooldown = this.cooldown_len;
+            end
+        end        
+        
+        this.armed = this.firing<=0 && this.cooldown<=0 && abs(this.vx)<=this.v_arm;
         
         if abs(this.x) > this.W/2
             this.x = this.W/2 * sign(this.x);
             this.Z_Gun = this.Z_Gun * 0;
         end
         
+        % HISTORY
         samples = floor(this.max_hist_time / this.T);
         this.hist_vx = [this.hist_vx; this.vx];
         this.hist_Vr = [this.hist_Vr; this.Vr];
@@ -142,18 +191,41 @@ methods(Access=public)
         cla(this.fig)
         this.select_world;
         axis off
-        hold on        
-        text(-this.W/2*this.scale, this.H*this.scale, ...
+        hold on 
+        
+        % Foes
+        for i = 1:numel(this.foes)
+            this.foes{i}.draw()
+        end
+        
+        % Gun status
+        if this.firing > 0
+            gs = 4;
+        elseif this.cooldown > 0
+            gs = 3;
+        elseif this.armed
+            gs = 2;
+        else
+            gs = 1;
+        end
+        
+        text(-this.W/2*this.scale, -6*this.scale, ...
             sprintf('CPU: %5.1f%%\nGun: %s\nCooldown: %3.1f', ...
                 mean(this.load)*100, ...
-                this.txt_armed{this.armed+1}, ...
-                0))
+                this.txt_armed{gs}, ...
+                this.cooldown))
         
         boxX = [-this.W/2 this.W/2 this.W/2 -this.W/2 -this.W/2]'.*this.scale;
         boxY = [0 0 this.H this.H 0]'.*this.scale;
         plot(boxX, boxY, 'k');
         
-        plot(this.x*this.scale, 0, this.mark_armed{this.armed + 1})
+        plot(this.x*this.scale, 0, this.mark_armed{gs})
+        
+        if (this.firing > 0)
+            rayX = [this.x this.x]*this.scale;
+            rayY = [0 this.H]*this.scale;
+            plot(rayX', rayY', 'r-');
+        end        
         
         axis equal
         drawnow
@@ -180,13 +252,14 @@ methods(Access=public)
 
             % Wait
             elapsed   = toc(this.prev);
-            this.prev = tic;
+            this.prev = tic;            
+            if elapsed < this.T
+                pause(this.T - elapsed)
+            end
+            
             this.load = [this.load elapsed / this.T];
             if numel(this.load) > this.load_len
                 this.load = this.load(2:end);
-            end
-            if elapsed < this.T
-                pause(this.T - elapsed)
             end
         end
     end
