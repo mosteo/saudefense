@@ -1,19 +1,24 @@
 classdef foe < handle
     
-properties
-    x, y, vx, vy
-    
+properties(Constant)
     vy_max = 4;
     accel  = 1;
-    
-    marker = {'rx', 'kv'}
-    alive = true
-    dying = 0
     dying_len = 2;
     
-    hitbox = 3;
+    size = 3;
+    spriteY = [0 1 2 3 4 4 3 2 1 0]'*foe.size/2;
+    spriteX = [0 1 1 0.2 1 -1 -0.2 -1 -1 0]'*foe.size/2;
+    
+    marker = {'rx', 'kv'}
+end
 
-    game
+properties
+    x, y, vx, vy
+        
+    alive = true
+    dying = 0
+        
+    game        
 end
     
 methods(Access=public)
@@ -27,8 +32,16 @@ methods(Access=public)
         this.vx = 0;
     end
     
-    function draw(this)        
-        plot(this.x*this.game.scale, this.y*this.game.scale, this.marker{this.alive+1});
+    function draw(this)     
+        if this.alive
+            plot((this.spriteX + this.x)*this.game.scale, ...
+                 (this.spriteY + this.y)*this.game.scale, ...
+                  'k');
+        else
+            plot(this.x*this.game.scale, ...
+                 this.y*this.game.scale, ...
+                  'xr');
+        end
     end
     
     function [alive, hit] = update(this)
@@ -45,11 +58,13 @@ methods(Access=public)
         
         hit    = this.alive && (this.y <= 0);
         
-        if this.alive && this.game.firing>0 && abs(this.x - this.game.x)<this.hitbox
+        if this.alive && this.game.firing>0 && abs(this.x - this.game.x)<this.size/2
             fprintf('Hit\n');
             this.alive = false;
             this.dying = this.dying_len;
             this.vy = this.vy / 2;
+            % fix Y offset
+            this.y = this.y + this.size*1/2;
         end
         
         if this.dying > 0 

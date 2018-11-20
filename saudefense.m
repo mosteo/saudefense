@@ -1,9 +1,16 @@
 classdef saudefense < handle
-   
-properties
-    % Constants
+
+% To Do:
+% Plot position input/output
+% Implement non-K controllers
+% Plot controlled position response
+% Plot controlled rlocus
+    
+properties(Constant)
+    T       = 1/20  % period
+        
     Ts      = 2     % Motor response time
-    OS      = 0.10  % Motor overshoot
+    OS      = 0.1   % Motor overshoot
     
     scale   = 0.1   % scale to window
     W       = 90    % world width
@@ -11,19 +18,22 @@ properties
     Vr_max  = 5
     v_arm   = 0.5   % max speed allowing fire
     
-    foe_lambda = 1/4 % Incomings per second (lambda for poisson)
+    foe_lambda = 2/4 % Incomings per second (lambda for poisson)
     
     txt_armed={'disarmed', 'armed', 'cooling down', 'firing'}
     mark_armed={'o','^', 'v', '^'}
-    
+end
+
+properties        
     % Timing
-    T       = 1/10  % period
     prev    = tic
     load    = zeros(1, 10)  % CPU use in %1
     load_len= 10      % Samples to avg
     
     G_Gun           % gun's continuous TF
     D_Gun           % gun's discrete z-TF
+    C               % controller
+    DC              % discrete controller
     
     % Drawing
     fig             % world handle
@@ -48,11 +58,17 @@ properties
     
     % SAU things
     Z_Gun            % internal state of gun
+    auto_aim  = true
+    auto_fire = true
+    C_Kp = 0.05
+    C_Kd = 0
+    C_Ki = 1
     
     % History
     max_hist_time = 10 % Seconds of history to keep
     hist_vx = []
     hist_Vr = []
+    hist_Cr = []
 end
 
 methods(Access=private)
@@ -82,6 +98,8 @@ methods(Access=public)
         this.G_Gun = wn^2/(s^2+2*zwn*s+wn^2);
         this.D_Gun = c2d(this.G_Gun, this.T);
         this.Z_Gun = zeros(numel(this.D_Gun.den{1})-1, 1);
+        
+        this.G_Gun
         
         function keyPress(~, eventdata)
             if strcmp(eventdata.Key, 'numpad6')
@@ -116,18 +134,21 @@ methods(Access=public)
             end
         end
         
+        set(0, 'DefaultLineLineWidth', 2);
+        
         this.window = figure(1);
         this.fig = this.select_world;
-        title('Battlescape')
+        title('Battlefield')
         set(this.window, 'KeyPressFcn', @keyPress, 'KeyReleaseFcn', @keyRelease);
         
         this.fig_signals = this.select_history;
         ylabel('Motor speed')
         xlabel('Seconds from now')
-        title('Input/Output')
+        title('\Omega(s) Input/Output')
         
         this.select_analysis;
         step(this.G_Gun);
+        title('Manual response')
         
         this.loop;
     end
@@ -139,19 +160,44 @@ methods(Access=public)
             this.foes{end+1} = foe(this);
         end
         
-        i = 1;
+        closer_foe = 0;
+        i = 1;        
         while i <= numel(this.foes)
             [alive, hit] = this.foes{i}.update();
             if ~alive || hit
                 this.foes(i) = [];
             else 
+                if this.foes{i}.alive && ...
+                   this.foes{i}.y < this.H - this.foes{i}.size && ...
+                        (closer_foe == 0 || ...                         
+                         this.foes{i}.y < this.foes{closer_foe}.y)
+                    closer_foe = i;
+                end
                 i = i + 1;
             end
         end
         
-        % GUN DYNAMICS & FIRING
+        % GUN CONTROL
+        Vrauto = 0;
+        if this.auto_aim && closer_foe > 0
+            Xr = this.foes{closer_foe}.x;
+            Vrauto = this.C_Kp*(Xr - this.x);
+            
+            % Saturation:
+            if abs(Vrauto) > this.Vr_max
+                Vrauto = this.Vr_max*sign(Vrauto);
+            end
+        end
+        
+        U = Vrauto + this.Vr; % Control signal
+        if abs(U) > this.Vr_max
+            U = this.Vr_max*sign(U);
+        end
+        
+        % GUN DYNAMICS & FIRING        
         [this.vx, this.Z_Gun] = ...
-            filter(this.D_Gun.num{1}', this.D_Gun.den{1}', this.Vr, this.Z_Gun);
+            filter(this.D_Gun.num{1}', this.D_Gun.den{1}', U, this.Z_Gun);
+
         this.x = this.x + this.vx;        
         
         if this.cooldown > 0
@@ -163,6 +209,11 @@ methods(Access=public)
         
         if this.firing > 0
             this.firing = this.firing - this.T;
+            
+            if abs(this.vx) > this.v_arm % Abort firing and start coldown
+                this.firing = -1;
+            end
+                
             if this.firing < 0 
                 this.cooldown = this.cooldown_len;
             end
@@ -170,19 +221,29 @@ methods(Access=public)
         
         this.armed = this.firing<=0 && this.cooldown<=0 && abs(this.vx)<=this.v_arm;
         
+        % Collision
         if abs(this.x) > this.W/2
             this.x = this.W/2 * sign(this.x);
             this.Z_Gun = this.Z_Gun * 0;
+        end
+        
+        % Autofire (once armed is computed)
+        if this.auto_fire && this.armed && closer_foe > 0 && ...
+                abs(this.x - this.foes{closer_foe}.x) <= this.foes{closer_foe}.size/2
+            this.firing = this.firing_len;
+            this.armed  = false;
         end
         
         % HISTORY
         samples = floor(this.max_hist_time / this.T);
         this.hist_vx = [this.hist_vx; this.vx];
         this.hist_Vr = [this.hist_Vr; this.Vr];
+        this.hist_Cr = [this.hist_Cr; Vrauto];
         
         if numel(this.hist_vx) > samples
             this.hist_vx = this.hist_vx(2:end);
             this.hist_Vr = this.hist_Vr(2:end);
+            this.hist_Cr = this.hist_Cr(2:end);
         end
     end
     
@@ -209,9 +270,9 @@ methods(Access=public)
             gs = 1;
         end
         
-        text(-this.W/2*this.scale, -6*this.scale, ...
+        text(-this.W/2*this.scale, -16*this.scale, ...
             sprintf('CPU: %5.1f%%\nGun: %s\nCooldown: %3.1f', ...
-                mean(this.load)*100, ...
+                mean(this.load)*100, ...,                
                 this.txt_armed{gs}, ...
                 this.cooldown))
         
@@ -219,7 +280,7 @@ methods(Access=public)
         boxY = [0 0 this.H this.H 0]'.*this.scale;
         plot(boxX, boxY, 'k');
         
-        plot(this.x*this.scale, 0, this.mark_armed{gs})
+        plot(this.x*this.scale, 0, this.mark_armed{gs}, 'MarkerSize', foe.size*4)
         
         if (this.firing > 0)
             rayX = [this.x this.x]*this.scale;
@@ -227,7 +288,7 @@ methods(Access=public)
             plot(rayX', rayY', 'r-');
         end        
         
-        axis equal
+        axis([-this.W/2 this.W/2 0 this.H]*this.scale)
         drawnow
         
         % SIGNALS
@@ -236,7 +297,7 @@ methods(Access=public)
             this.select_history;
             hold on
             X=(-numel(this.hist_vx)+1:0)' * this.T;
-            plot(X, this.hist_vx, X, this.hist_Vr);
+            plot(X, this.hist_vx, X, this.hist_Vr, X, this.hist_Cr);
             axis([-this.max_hist_time 0 -this.Vr_max*1.05 this.Vr_max*1.05])
             drawnow
         end
