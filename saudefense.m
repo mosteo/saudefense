@@ -307,6 +307,8 @@ methods(Access=public)
             gs = 1;
         end
         
+        text((2-this.W/2)*this.scale, (this.H-4)*this.scale, sprintf('%d', this.hits));
+        
         text(-this.W/2*this.scale, -16*this.scale, ...
             sprintf('CPU: %5.1f%%\nGun: %s\nCooldown: %3.1f', ...
                 mean(this.load)*100, ...,                
