@@ -44,6 +44,9 @@ properties
     firing   = 0     % time left in current firing
     firing_len = 0.5 % time a firing lasts
     
+    hits  = 0 % Foes destroyed   
+    lives = 3;    
+    
     foes = {}
     
     cooldown = 0
@@ -179,7 +182,11 @@ methods(Access=public)
         closer_foe = 0;
         i = 1;        
         while i <= numel(this.foes)
-            [alive, hit] = this.foes{i}.update();
+            [alive, hit, destroyed] = this.foes{i}.update();
+            
+            this.lives = this.lives - hit;
+            this.hits  = this.hits + destroyed;
+            
             if ~alive || hit
                 this.foes(i) = [];
             else 
@@ -278,6 +285,12 @@ methods(Access=public)
         axis off
         hold on 
         
+        % lives
+        for i=1:this.lives
+            plot([-this.W this.W]'*this.scale, ...
+                 ones(2,1)*i*2*this.scale, 'g');
+        end
+        
         % Foes
         for i = 1:numel(this.foes)
             this.foes{i}.draw()
@@ -330,7 +343,7 @@ methods(Access=public)
     end   
     
     function loop(this)
-        while true
+        while this.lives >= 0
             % Compute
             this.compute;
 
@@ -349,6 +362,8 @@ methods(Access=public)
                 this.load = this.load(2:end);
             end
         end
+        
+        fprintf('FINAL SCORE: %d foes destroyed\n', this.hits);
     end
     
 end

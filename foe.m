@@ -91,7 +91,7 @@ methods(Access=public)
         end
     end
     
-    function [alive, hit] = update(this)
+    function [alive, hit, destroyed] = update(this)
         this.x  = this.x + this.vx*this.game.T;        
         if abs(this.x) > this.game.W/2
             this.alive = false;
@@ -110,11 +110,14 @@ methods(Access=public)
         
         if this.alive && this.game.firing>0 && abs(this.x - this.game.x)<this.size/2
             fprintf('Hit\n');
+            destroyed = true;
             this.alive = false;
             this.dying = this.dying_len;
             this.vy = this.vy / 2;
             % fix Y offset
             this.y = this.y + this.size*1/2;
+        else
+            destroyed = false;
         end
         
         if this.dying > 0 
