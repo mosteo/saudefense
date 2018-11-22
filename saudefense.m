@@ -1,18 +1,17 @@
 classdef saudefense < handle
 
 % TO DO:
-% Migrate FdTs to own class
 % Plot position input/output
-% Implement non-K controllers
 % Plot controlled position response
 % Plot controlled rlocus
     
 properties(Constant)
-    T       = 1/20  % period
+    T       = 1/10  % period
         
-    Ts      = 2     % Motor response time
-    OS      = 0.1   % Motor overshoot
-    speed   = 10     % Gun m/s (static motor gain)
+    %Ts      = 2     % Motor response time
+    %OS      = 0.1   % Motor overshoot    
+    tau     = 0.25   % 1st order gun model
+    speed   = 10    % Gun m/s (static motor gain)
     
     scale   = 0.1   % scale to window
     W       = 90    % world width
@@ -30,12 +29,7 @@ properties
     % Timing
     prev    = tic
     load    = zeros(1, 10)  % CPU use in %1
-    load_len= 10      % Samples to avg
-    
-    G_Gun           % gun's continuous TF
-    D_Gun           % gun's discrete z-TF
-    C               % controller
-    DC              % discrete controller
+    load_len= 10      % Samples to avg        
     
     % Drawing
     fig             % world handle
@@ -45,7 +39,7 @@ properties
     % Vars
     x        = 0     % gun position
     vx       = 0     % gun speed
-    Vr       = 0     % reference instantaneous manual input  
+    Vr_man   = 0     % reference instantaneous manual input  
     armed    = true        
     firing   = 0     % time left in current firing
     firing_len = 0.5 % time a firing lasts
@@ -58,16 +52,18 @@ properties
     numpad4  = false
     numpad6  = false
     
-    % SAU things
-    Z_Gun            % internal state of gun
     auto_aim  = true
     auto_fire = true
+        
+    % SAU things
+    G_Gun           % gun's TF    
+    G_C             % controller
+    G_I             % sensor (integrator)        
     
-    C_Kp = 0.106 % PID constants
-    C_Kd = 0
-    C_Ki = 0
-    
-    C_Kir = 1   % Feedback integrator constant
+    C_Kp = 0.1 % PID constants    
+    C_Ki = 0.0       
+    C_Kd = 0.0
+    C_Kn = saudefense.T   % Filter freq (hf pole)
     
     % History
     max_hist_time = 10 % Seconds of history to keep
@@ -97,21 +93,29 @@ methods(Access=public)
     function this = saudefense
         close all
         s = tf('s');
-        zwn=4/this.Ts;       
-        z=-log(this.OS)/sqrt(pi^2 + log(this.OS)^2);
-        wn=zwn/z;
-        this.G_Gun = wn^2/(s^2+2*zwn*s+wn^2)*this.speed;
-        this.D_Gun = c2d(this.G_Gun, this.T);
-        this.Z_Gun = zeros(numel(this.D_Gun.den{1})-1, 1);
         
-        this.G_Gun       
+        % 2nd order gun
+        %zwn=4/this.Ts;       
+        %z=-log(this.OS)/sqrt(pi^2 + log(this.OS)^2);
+        %wn=zwn/z;                
+        %this.G_Gun = dtf(wn^2/(s^2+2*zwn*s+wn^2)*this.speed, this.T);                
+        
+        % 1st order gun
+        this.G_Gun = dtf(this.speed/(this.tau*s+1), this.T);
+        this.G_Gun.ctf
+        
+        this.G_C = dtf(this.C_Kp + this.C_Ki/s + ...
+            this.C_Kd*this.C_Kn*s/(s+this.C_Kn), this.T);
+        this.G_C.ctf
+        
+        this.G_I = dtf(1/s, this.T);
         
         function keyPress(~, eventdata)
             if strcmp(eventdata.Key, 'numpad6')
-                this.Vr      = this.Vr_max;
+                this.Vr_man      = this.Vr_max;
                 this.numpad6 = true;
             elseif strcmp(eventdata.Key, 'numpad4')
-                this.Vr      = -this.Vr_max;
+                this.Vr_man      = -this.Vr_max;
                 this.numpad4 = true;
             elseif strcmp(eventdata.Key, 'numpad8')
                 if this.armed
@@ -125,16 +129,16 @@ methods(Access=public)
             if strcmp(eventdata.Key, 'numpad6')
                 this.numpad6 = false;
                 if this.numpad4 
-                    this.Vr = -this.Vr_max;
+                    this.Vr_man = -this.Vr_max;
                 else
-                    this.Vr = 0;
+                    this.Vr_man = 0;
                 end
             elseif strcmp(eventdata.Key, 'numpad4')
                 this.numpad4 = false;
                 if this.numpad6
-                    this.Vr = this.Vr_max;
+                    this.Vr_man = this.Vr_max;
                 else
-                    this.Vr = 0;
+                    this.Vr_man = 0;
                 end
             end
         end
@@ -152,9 +156,14 @@ methods(Access=public)
         title('\Omega(s) Input/Output')
         
         this.select_analysis;
-        step(this.G_Gun/this.speed); % normalized to unity
         hold on
-        step(feedback(this.C_Kp * this.G_Gun / s, 1));
+        % motor speed response
+        step(this.G_Gun.tf/this.speed); % normalized to unity        
+        % controlled position response
+        step(feedback(this.G_C.tf * this.G_Gun.tf * this.G_I.tf, 1));
+        % ramp error response
+        impulse(c2d(1/s^2, this.T) - ...
+                c2d(1/s^2, this.T)*feedback(this.G_C.tf * this.G_Gun.tf * this.G_I.tf, 1));
         %title('Manual response')
         
         this.loop;
@@ -164,7 +173,7 @@ methods(Access=public)
         
         % FOES
         if rand < poisspdf(1, this.foe_lambda*this.T)
-            this.foes{end+1} = foe(this, foe.BOMB);
+            this.foes{end+1} = foe(this, 2-(rand<0.8));%, foe.BOMB);
         end
         
         closer_foe = 0;
@@ -183,29 +192,32 @@ methods(Access=public)
                 i = i + 1;
             end
         end
+                
+        % DYNAMICS
         
-        % GUN CONTROL
-        Vrauto = 0;
+        % Control input
+        E = 0;
         if this.auto_aim && closer_foe > 0
-            Xr = this.foes{closer_foe}.x;
-            Vrauto = this.C_Kp*(Xr - this.x);
-            
-            % Saturation:
-            if abs(Vrauto) > this.Vr_max
-                Vrauto = this.Vr_max*sign(Vrauto);
-            end
+            Xr      = this.foes{closer_foe}.x;
+            E = Xr - this.x;                        
         end       
         
-        U = Vrauto + this.Vr; % Control signal
+        % Control output
+        U_auto = this.G_C.output(E);        
+        
+        % Mixed motor input (saturated)
+        U = U_auto + this.Vr_man;        
         if abs(U) > this.Vr_max
             U = this.Vr_max*sign(U);
         end
         
-        % GUN DYNAMICS & FIRING        
-        [this.vx, this.Z_Gun] = ...
-            filter(this.D_Gun.num{1}', this.D_Gun.den{1}', U, this.Z_Gun);
+        % Gun speed
+        this.vx = this.G_Gun.output(U);
 
-        this.x = this.x + this.vx*this.T;        
+        % Gun position
+        this.x = this.G_I.output(this.vx);
+        
+        % FIRING
         
         if this.cooldown > 0
             this.cooldown = this.cooldown - this.T;
@@ -231,8 +243,13 @@ methods(Access=public)
         % Collision
         if abs(this.x) > this.W/2
             this.x = this.W/2 * sign(this.x);
-            this.Z_Gun = this.Z_Gun * 0;
+            % reset states
+            this.G_C.reset_state();
+            this.G_Gun.reset_state();
+            % integrator stated fixed to next value
+            this.G_I.set_state(this.x);
         end
+        %fprintf('%6.3f %6.3f\n', this.x, this.G_I.state);
         
         % Autofire (once armed is computed)
         if this.auto_fire && this.armed && closer_foe > 0 && ...
@@ -244,8 +261,8 @@ methods(Access=public)
         % HISTORY
         samples = floor(this.max_hist_time / this.T);
         this.hist_vx = [this.hist_vx; this.vx*this.T];
-        this.hist_Vr = [this.hist_Vr; this.Vr];
-        this.hist_Cr = [this.hist_Cr; Vrauto];
+        this.hist_Vr = [this.hist_Vr; this.Vr_man];
+        this.hist_Cr = [this.hist_Cr; U_auto];
         
         if numel(this.hist_vx) > samples
             this.hist_vx = this.hist_vx(2:end);
