@@ -1,6 +1,7 @@
 classdef saudefense < handle
 
-% To Do:
+% TO DO:
+% Migrate FdTs to own class
 % Plot position input/output
 % Implement non-K controllers
 % Plot controlled position response
@@ -11,12 +12,13 @@ properties(Constant)
         
     Ts      = 2     % Motor response time
     OS      = 0.1   % Motor overshoot
+    speed   = 10     % Gun m/s (static motor gain)
     
     scale   = 0.1   % scale to window
     W       = 90    % world width
     H       = 160   % world height
     Vr_max  = 5
-    v_arm   = 0.5   % max speed allowing fire
+    v_arm   = saudefense.speed/10   % max speed allowing fire
     
     foe_lambda = 2/4 % Incomings per second (lambda for poisson)
     
@@ -60,9 +62,12 @@ properties
     Z_Gun            % internal state of gun
     auto_aim  = true
     auto_fire = true
-    C_Kp = 0.05
+    
+    C_Kp = 0.106 % PID constants
     C_Kd = 0
-    C_Ki = 1
+    C_Ki = 0
+    
+    C_Kir = 1   % Feedback integrator constant
     
     % History
     max_hist_time = 10 % Seconds of history to keep
@@ -95,11 +100,11 @@ methods(Access=public)
         zwn=4/this.Ts;       
         z=-log(this.OS)/sqrt(pi^2 + log(this.OS)^2);
         wn=zwn/z;
-        this.G_Gun = wn^2/(s^2+2*zwn*s+wn^2);
+        this.G_Gun = wn^2/(s^2+2*zwn*s+wn^2)*this.speed;
         this.D_Gun = c2d(this.G_Gun, this.T);
         this.Z_Gun = zeros(numel(this.D_Gun.den{1})-1, 1);
         
-        this.G_Gun
+        this.G_Gun       
         
         function keyPress(~, eventdata)
             if strcmp(eventdata.Key, 'numpad6')
@@ -147,8 +152,10 @@ methods(Access=public)
         title('\Omega(s) Input/Output')
         
         this.select_analysis;
-        step(this.G_Gun);
-        title('Manual response')
+        step(this.G_Gun/this.speed); % normalized to unity
+        hold on
+        step(feedback(this.C_Kp * this.G_Gun / s, 1));
+        %title('Manual response')
         
         this.loop;
     end
@@ -157,7 +164,7 @@ methods(Access=public)
         
         % FOES
         if rand < poisspdf(1, this.foe_lambda*this.T)
-            this.foes{end+1} = foe(this);
+            this.foes{end+1} = foe(this, foe.BOMB);
         end
         
         closer_foe = 0;
@@ -187,7 +194,7 @@ methods(Access=public)
             if abs(Vrauto) > this.Vr_max
                 Vrauto = this.Vr_max*sign(Vrauto);
             end
-        end
+        end       
         
         U = Vrauto + this.Vr; % Control signal
         if abs(U) > this.Vr_max
@@ -198,7 +205,7 @@ methods(Access=public)
         [this.vx, this.Z_Gun] = ...
             filter(this.D_Gun.num{1}', this.D_Gun.den{1}', U, this.Z_Gun);
 
-        this.x = this.x + this.vx;        
+        this.x = this.x + this.vx*this.T;        
         
         if this.cooldown > 0
             this.cooldown = this.cooldown - this.T;
@@ -236,7 +243,7 @@ methods(Access=public)
         
         % HISTORY
         samples = floor(this.max_hist_time / this.T);
-        this.hist_vx = [this.hist_vx; this.vx];
+        this.hist_vx = [this.hist_vx; this.vx*this.T];
         this.hist_Vr = [this.hist_Vr; this.Vr];
         this.hist_Cr = [this.hist_Cr; Vrauto];
         
@@ -297,8 +304,10 @@ methods(Access=public)
             this.select_history;
             hold on
             X=(-numel(this.hist_vx)+1:0)' * this.T;
-            plot(X, this.hist_vx, X, this.hist_Vr, X, this.hist_Cr);
-            axis([-this.max_hist_time 0 -this.Vr_max*1.05 this.Vr_max*1.05])
+            plot(X, this.hist_vx/this.speed, ...
+                 X, this.hist_Vr/this.Vr_max, ...
+                 X, this.hist_Cr/this.Vr_max);
+            axis([-this.max_hist_time 0 -1.05 1.05])
             drawnow
         end
     end   
