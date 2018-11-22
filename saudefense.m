@@ -6,7 +6,7 @@ classdef saudefense < handle
 % Plot controlled rlocus
     
 properties(Constant)
-    T       = 1/10  % period
+    T       = 1/20  % period
         
     %Ts      = 2     % Motor response time
     %OS      = 0.1   % Motor overshoot    
@@ -27,7 +27,6 @@ end
 
 properties        
     % Timing
-    prev    = tic
     load    = zeros(1, 10)  % CPU use in %1
     load_len= 10      % Samples to avg        
     
@@ -93,8 +92,8 @@ end
 
 methods(Access=public)
     
-    function this = saudefense
-        close all
+    function this = saudefense(battle_handle)
+        % LTI SETUP
         s = tf('s');
         
         % 2nd order gun
@@ -111,47 +110,21 @@ methods(Access=public)
             this.C_Kd*this.C_Kn*s/(s+this.C_Kn), this.T);
         this.G_C.ctf
         
-        this.G_I = dtf(1/s, this.T);
+        this.G_I = dtf(1/s, this.T);                
         
-        function keyPress(~, eventdata)
-            if strcmp(eventdata.Key, 'numpad6')
-                this.Vr_man      = this.Vr_max;
-                this.numpad6 = true;
-            elseif strcmp(eventdata.Key, 'numpad4')
-                this.Vr_man      = -this.Vr_max;
-                this.numpad4 = true;
-            elseif strcmp(eventdata.Key, 'numpad8')
-                if this.armed
-                    this.firing = this.firing_len;
-                    this.armed  = false;
-                end
-            end
-        end       
+        % BATTLE SETUP
+        set(battle_handle, 'DefaultLineLineWidth', 2);
+        axes(battle_handle);
+        axis off
+        hold on
+        %axes(battle_handle, 'xtick',[],'ytick',[],'ztick',[]);                
+        %set(battle_handle, 'color', 'w');
+        cla(battle_handle);
+        axis(battle_handle, [-this.W/2 this.W/2 0 this.H]*this.scale)        
+        drawnow
+        this.fig = battle_handle;
         
-        function keyRelease(~, eventdata)
-            if strcmp(eventdata.Key, 'numpad6')
-                this.numpad6 = false;
-                if this.numpad4 
-                    this.Vr_man = -this.Vr_max;
-                else
-                    this.Vr_man = 0;
-                end
-            elseif strcmp(eventdata.Key, 'numpad4')
-                this.numpad4 = false;
-                if this.numpad6
-                    this.Vr_man = this.Vr_max;
-                else
-                    this.Vr_man = 0;
-                end
-            end
-        end
-        
-        set(0, 'DefaultLineLineWidth', 2);
-        
-        this.window = figure(1);
-        this.fig = this.select_world;
-        title('Battlefield')
-        set(this.window, 'KeyPressFcn', @keyPress, 'KeyReleaseFcn', @keyRelease);
+        return;        
         
         this.fig_signals = this.select_history;
         ylabel('Motor speed')
@@ -281,13 +254,14 @@ methods(Access=public)
     function draw(this)   
         % WORLD
         cla(this.fig)
-        this.select_world;
-        axis off
-        hold on 
+        axes(this.fig)
+        fill(this.fig, ...
+            [-this.W/2; this.W/2; this.W/2; -this.W/2]*this.scale, ...
+            [0; 0; this.H; this.H], 'w');
         
         % lives
         for i=1:this.lives
-            plot([-this.W this.W]'*this.scale, ...
+            plot([-this.W/2 this.W/2]'*this.scale, ...
                  ones(2,1)*i*2*this.scale, 'g');
         end
         
@@ -327,9 +301,10 @@ methods(Access=public)
             plot(rayX', rayY', 'r-');
         end        
         
-        axis([-this.W/2 this.W/2 0 this.H]*this.scale)
+        %axis([-this.W/2 this.W/2 0 this.H]*this.scale)
         drawnow
         
+        return
         % SIGNALS
         if numel(this.hist_vx) > 1
             cla(this.fig_signals);
@@ -344,28 +319,56 @@ methods(Access=public)
         end
     end   
     
-    function loop(this)
-        while this.lives >= 0
-            % Compute
-            this.compute;
+    function done = iterate(this)
+        done = this.lives < 0;
+        
+        start = tic;
 
-            % Draw
-            this.draw;
+        % Compute
+        this.compute;
 
-            % Wait
-            elapsed   = toc(this.prev);
-            this.prev = tic;            
-            if elapsed < this.T
-                pause(this.T - elapsed)
-            end
-            
-            this.load = [this.load elapsed / this.T];
-            if numel(this.load) > this.load_len
-                this.load = this.load(2:end);
+        % Draw
+        this.draw;
+
+        % Load
+        elapsed = toc(start);                        
+        this.load = [this.load elapsed / this.T];
+        if numel(this.load) > this.load_len
+            this.load = this.load(2:end);
+        end        
+    end    
+    
+    function keyPress(this, eventdata)
+        if strcmp(eventdata.Key, 'numpad6')
+            this.Vr_man      = this.Vr_max;
+            this.numpad6 = true;
+        elseif strcmp(eventdata.Key, 'numpad4')
+            this.Vr_man      = -this.Vr_max;
+            this.numpad4 = true;
+        elseif strcmp(eventdata.Key, 'numpad8')
+            if this.armed
+                this.firing = this.firing_len;
+                this.armed  = false;
             end
         end
-        
-        fprintf('FINAL SCORE: %d foes destroyed\n', this.hits);
+    end       
+
+    function keyRelease(this, eventdata)
+        if strcmp(eventdata.Key, 'numpad6')
+            this.numpad6 = false;
+            if this.numpad4 
+                this.Vr_man = -this.Vr_max;
+            else
+                this.Vr_man = 0;
+            end
+        elseif strcmp(eventdata.Key, 'numpad4')
+            this.numpad4 = false;
+            if this.numpad6
+                this.Vr_man = this.Vr_max;
+            else
+                this.Vr_man = 0;
+            end
+        end
     end
     
 end
