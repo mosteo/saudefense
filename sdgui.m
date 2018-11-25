@@ -22,7 +22,7 @@ function varargout = sdgui(varargin)
 
 % Edit the above text to modify the response to help sdgui
 
-% Last Modified by GUIDE v2.5 25-Nov-2018 17:59:15
+% Last Modified by GUIDE v2.5 25-Nov-2018 21:06:58
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -45,11 +45,15 @@ end
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 function looper(handles)
-handles.sau.iterate();
-handles.difficulty.Value = handles.sau.difficulty;
-sdfunc.update_difficulty_panel(handles);
-sdfunc.update_texts(handles, handles.sau);
-handles.sau.update_siso_plot(handles.siso);
+if isfield(handles, 'sau') && ~handles.closing
+    handles.sau.tic()
+    handles.sau.iterate();
+    handles.difficulty.Value = handles.sau.difficulty;
+    sdfunc.update_difficulty_panel(handles);
+    %handles.sau.update_siso_plot(handles.siso);
+    handles.sau.toc()
+    sdfunc.update_texts(handles, handles.sau);    
+end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 % --- Executes just before sdgui is made visible.
@@ -65,12 +69,16 @@ handles.output = hObject;
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % MY OWN INITIALIZATION
-diagram = imread('logo.jpg');
 axes(handles.diagram);
+diagram = imread('diagram.jpg');
+dpos    = handles.diagram.Position;
+diagram = imresize(diagram, [dpos(4) dpos(3)]);
 imshow(diagram);
 
 handles.sau    = saudefense(handles.battle);
 sau = handles.sau;
+
+handles.closing = false;
 
 handles.difficulty.Value = sau.difficulty;
 sdfunc.update_difficulty_panel(handles);
@@ -180,7 +188,7 @@ function window_DeleteFcn(hObject, eventdata, handles)
 % hObject    handle to window (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
-if isfield(handles, 'looper')
+if isfield(handles, 'looper') && isvalid(handles.looper)
     stop(handles.looper);
     delete(handles.looper);
 end
@@ -341,3 +349,16 @@ function rb_discrete_Callback(hObject, eventdata, handles)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 handles.sau.update_rlocus(handles.rlocus, handles.rb_continuous.Value ~= 0);
+
+
+% --- Executes when user attempts to close window.
+function window_CloseRequestFcn(hObject, eventdata, handles)
+% hObject    handle to window (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+stop(handles.looper);
+delete(handles.looper);
+handles.closing = true;
+pause(handles.sau.T*2);
+% Hint: delete(hObject) closes the figure
+delete(hObject);

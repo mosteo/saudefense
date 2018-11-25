@@ -8,8 +8,8 @@ properties(Constant)
     W       = 90    % world width
     H       = 160   % world height
     Vr_max  = 5
-    v_arm   = 2   % max speed allowing fire
-    a_arm   = 1   % max accel allowing fire
+    v_arm   = 10  % max speed allowing fire
+    a_arm   = 10  % max accel allowing fire
     
     foe_lambda = 1/4 % Incomings per second (lambda for poisson)
     % initial rate, that increases with difficulty
@@ -22,7 +22,8 @@ end
 
 properties        
     % Timing
-    T       = 1/10  % period
+    T       = 1/20  % period
+    start           % of each cycle (for load computation)
     
     load    = zeros(1, 10)  % CPU use in %1
     load_len= 10      % Samples to avg        
@@ -42,6 +43,8 @@ properties
     firing   = 0     % time left in current firing
     firing_len = 0.5 % time a firing lasts
     
+    target = 0
+    
     difficulty = 0;
     
     hits  = 0 % Foes destroyed   
@@ -59,7 +62,7 @@ properties
     auto_fire = true
         
     % SAU things
-    tau     = 0.25  % 1st order gun model
+    tau     = 0.05  % 1st order gun model
     speed   = 10    % Gun m/s (static motor gain)
     
     G_Gun           % gun's TF    
@@ -70,6 +73,8 @@ properties
     C_Ki = 0.0       
     C_Kd = 0.0
     C_Kn = 1/20   % Filter freq (hf pole)
+    
+    U_auto
     
     % History
     max_hist_time = 10 % Seconds of history to keep
@@ -128,7 +133,7 @@ methods(Access=public)
             this.foes{end+1} = foe(this, 2-(rand>this.difficulty*0.9), this.difficulty);
         end
         
-        closer_foe = 0;
+        this.target = 0;
         i = 1;        
         while i <= numel(this.foes)
             [alive, hit, destroyed] = this.foes{i}.update();
@@ -141,28 +146,44 @@ methods(Access=public)
             else 
                 if this.foes{i}.alive && ...
                    this.foes{i}.y < this.H - this.foes{i}.size && ...
-                        (closer_foe == 0 || ...                         
-                         this.foes{i}.y < this.foes{closer_foe}.y)
-                    closer_foe = i;
+                        (this.target == 0 || ...                         
+                         this.foes{i}.y < this.foes{this.target}.y)
+                    this.target = i;
                 end
                 i = i + 1;
             end
         end
-                
-        % DYNAMICS
         
+        this.fire();
+                
+        this.dynamics();        
+        
+        % HISTORY
+        samples = floor(this.max_hist_time / this.T);
+        this.hist_vx = [this.hist_vx; this.vx*this.T];
+        this.hist_Vr = [this.hist_Vr; this.Vr_man];
+        this.hist_Cr = [this.hist_Cr; this.U_auto];
+        
+        if numel(this.hist_vx) > samples
+            this.hist_vx = this.hist_vx(2:end);
+            this.hist_Vr = this.hist_Vr(2:end);
+            this.hist_Cr = this.hist_Cr(2:end);
+        end
+    end
+    
+    function dynamics(this)
         % Control input
         E = 0;
-        if this.auto_aim && closer_foe > 0 && this.firing <= 0
-            Xr      = this.foes{closer_foe}.x;
+        if this.auto_aim && this.target > 0 && this.firing <= 0
+            Xr      = this.foes{this.target}.x;
             E = Xr - this.x;                        
         end       
         
         % Control output
-        U_auto = this.G_C.output(E);        
+        this.U_auto = this.G_C.output(E);        
         
         % Mixed motor input (saturated)
-        U = U_auto + this.Vr_man;        
+        U = this.U_auto + this.Vr_man;        
         if abs(U) > this.Vr_max
             U = this.Vr_max*sign(U);
         end
@@ -175,10 +196,18 @@ methods(Access=public)
         this.ax = (this.vx - this.vx_1) / this.T;
 
         % Gun position
-        this.x = this.G_I.output(this.vx);
+        this.x = this.G_I.output(this.vx);                       
         
-        % FIRING
-        
+        % Collision
+        if abs(this.x) > this.W/2
+            this.x = this.W/2 * sign(this.x);
+            this.hard_stop();
+        end
+        %fprintf('%6.3f %6.3f\n', this.x, this.G_I.state);
+    end
+    
+    function fire(this)
+        % Cooldown
         if this.cooldown > 0
             this.cooldown = this.cooldown - this.T;
             if this.cooldown < 0 
@@ -186,6 +215,7 @@ methods(Access=public)
             end
         end
         
+        % Firing
         if this.firing > 0
             this.firing = this.firing - this.T;
             
@@ -199,34 +229,16 @@ methods(Access=public)
             end
         end        
         
+        % Arming
         this.armed = this.firing<=0 && this.cooldown<=0 && ...
             abs(this.ax)<=this.a_arm && abs(this.vx)<=this.v_arm;
         
-        % Collision
-        if abs(this.x) > this.W/2
-            this.x = this.W/2 * sign(this.x);
-            this.hard_stop();
-        end
-        %fprintf('%6.3f %6.3f\n', this.x, this.G_I.state);
-        
         % Autofire (once armed is computed)
-        if this.auto_fire && this.armed && closer_foe > 0 && ...
-                abs(this.x - this.foes{closer_foe}.x) <= this.foes{closer_foe}.size/2
+        if this.auto_fire && this.armed && this.target > 0 && ...
+                abs(this.x - this.foes{this.target}.x) <= this.foes{this.target}.size/2
             this.firing = this.firing_len;
             this.armed  = false;
-        end
-        
-        % HISTORY
-        samples = floor(this.max_hist_time / this.T);
-        this.hist_vx = [this.hist_vx; this.vx*this.T];
-        this.hist_Vr = [this.hist_Vr; this.Vr_man];
-        this.hist_Cr = [this.hist_Cr; U_auto];
-        
-        if numel(this.hist_vx) > samples
-            this.hist_vx = this.hist_vx(2:end);
-            this.hist_Vr = this.hist_Vr(2:end);
-            this.hist_Cr = this.hist_Cr(2:end);
-        end
+        end 
     end
     
     function draw(this)   
@@ -288,20 +300,11 @@ methods(Access=public)
     function done = iterate(this)
         done = this.lives < 0;
         
-        start = tic;
-
         % Compute
         this.compute;
 
         % Draw
-        this.draw;
-
-        % Load
-        elapsed = toc(start);                        
-        this.load = [this.load elapsed / this.T];
-        if numel(this.load) > this.load_len
-            this.load = this.load(2:end);
-        end        
+        this.draw;           
     end    
     
     function keyPress(this, eventdata)
@@ -391,7 +394,7 @@ methods(Access=public)
         ylabel('');
     end    
     
-    function update_response_plot(this, axe)
+    function update_response_plot(this, axe)        
         axes(axe);
         cla
         hold on        
@@ -447,6 +450,19 @@ methods(Access=public)
         end
         
         title('');
+    end
+    
+    function tic(this)
+        this.start = tic;
+    end
+    
+    function toc(this)
+        % Load
+        elapsed = toc(this.start);                        
+        this.load = [this.load elapsed / this.T];
+        if numel(this.load) > this.load_len
+            this.load = this.load(2:end);
+        end    
     end
         
 end

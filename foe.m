@@ -111,7 +111,7 @@ methods(Access=public)
         
         hit = this.alive && (this.y <= 0);
         
-        if this.alive && this.game.firing>0 && abs(this.x - this.game.x)<this.size/2
+        if this.alive && this.game.firing>0 && abs(this.x - this.game.x)<=this.size/2
             fprintf('Hit\n');
             destroyed = true;
             this.alive = false;
