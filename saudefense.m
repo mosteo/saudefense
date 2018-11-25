@@ -1,9 +1,4 @@
 classdef saudefense < handle
-
-% TO DO:
-% Plot position input/output
-% Plot controlled position response
-% Plot controlled rlocus
     
 properties(Constant)        
     %Ts      = 2     % Motor response time
@@ -13,17 +8,21 @@ properties(Constant)
     W       = 90    % world width
     H       = 160   % world height
     Vr_max  = 5
-    v_arm   = 1   % max speed allowing fire
+    v_arm   = 2   % max speed allowing fire
+    a_arm   = 1   % max accel allowing fire
     
-    foe_lambda = 2/4 % Incomings per second (lambda for poisson)
+    foe_lambda = 1/4 % Incomings per second (lambda for poisson)
+    % initial rate, that increases with difficulty
     
     txt_armed={'disarmed', 'armed', 'cooling down', 'firing'}
     mark_armed={'o','^', 'v', '^'}
+    
+    difficulty_period = 5*60; % Time until max diff
 end
 
 properties        
     % Timing
-    T       = 1/20  % period
+    T       = 1/10  % period
     
     load    = zeros(1, 10)  % CPU use in %1
     load_len= 10      % Samples to avg        
@@ -36,10 +35,14 @@ properties
     % Vars
     x        = 0     % gun position
     vx       = 0     % gun speed
+    vx_1     = 0     % previoux speed
+    ax       = 0     % gun acceleration
     Vr_man   = 0     % reference instantaneous manual input  
     armed    = true        
     firing   = 0     % time left in current firing
     firing_len = 0.5 % time a firing lasts
+    
+    difficulty = 0;
     
     hits  = 0 % Foes destroyed   
     lives = 3;    
@@ -101,8 +104,6 @@ methods(Access=public)
         axes(battle_handle);
         axis off
         hold on
-        %axes(battle_handle, 'xtick',[],'ytick',[],'ztick',[]);                
-        %set(battle_handle, 'color', 'w');
         cla(battle_handle);
         axis(battle_handle, [-this.W/2 this.W/2 0 this.H]*this.scale)        
         drawnow
@@ -114,24 +115,17 @@ methods(Access=public)
 %         ylabel('Motor speed')
 %         xlabel('Seconds from now')
 %         title('\Omega(s) Input/Output')
-%         
-%         this.select_analysis;
-%         hold on
-%         % motor speed response
-%         step(this.G_Gun.tf/this.speed); % normalized to unity        
-%         % controlled position response
-%         step(feedback(this.G_C.tf * this.G_Gun.tf * this.G_I.tf, 1));
-%         % ramp error response
-%         impulse(c2d(1/s^2, this.T) - ...
-%                 c2d(1/s^2, this.T)*feedback(this.G_C.tf * this.G_Gun.tf * this.G_I.tf, 1));
-%         %title('Manual response')
     end
     
     function compute(this)
         
+        % Difficulty
+        this.difficulty = ...
+            min(1, this.difficulty + 1/this.difficulty_period*this.T);
+        
         % FOES
-        if rand < poisspdf(1, this.foe_lambda*this.T)
-            this.foes{end+1} = foe(this, 2-(rand<0.8));%, foe.BOMB);
+        if rand < poisspdf(1, (this.foe_lambda + this.difficulty/2)*this.T)
+            this.foes{end+1} = foe(this, 2-(rand>this.difficulty*0.9), this.difficulty);
         end
         
         closer_foe = 0;
@@ -159,7 +153,7 @@ methods(Access=public)
         
         % Control input
         E = 0;
-        if this.auto_aim && closer_foe > 0
+        if this.auto_aim && closer_foe > 0 && this.firing <= 0
             Xr      = this.foes{closer_foe}.x;
             E = Xr - this.x;                        
         end       
@@ -174,7 +168,11 @@ methods(Access=public)
         end
         
         % Gun speed
-        this.vx = this.G_Gun.output(U);
+        this.vx_1 = this.vx;
+        this.vx   = this.G_Gun.output(U);
+        
+        % Gun acceleration
+        this.ax = (this.vx - this.vx_1) / this.T;
 
         % Gun position
         this.x = this.G_I.output(this.vx);
@@ -191,7 +189,8 @@ methods(Access=public)
         if this.firing > 0
             this.firing = this.firing - this.T;
             
-            if abs(this.vx) > this.v_arm % Abort firing and start coldown
+            if abs(this.ax) > this.a_arm || abs(this.vx) > this.v_arm
+                % Abort firing and start cooldown
                 this.firing = -1;
             end
                 
@@ -200,7 +199,8 @@ methods(Access=public)
             end
         end        
         
-        this.armed = this.firing<=0 && this.cooldown<=0 && abs(this.vx)<=this.v_arm;
+        this.armed = this.firing<=0 && this.cooldown<=0 && ...
+            abs(this.ax)<=this.a_arm && abs(this.vx)<=this.v_arm;
         
         % Collision
         if abs(this.x) > this.W/2
@@ -259,13 +259,13 @@ methods(Access=public)
             gs = 1;
         end
         
-        text((2-this.W/2)*this.scale, (this.H-4)*this.scale, sprintf('%d', this.hits));
+        %text((2-this.W/2)*this.scale, (this.H-4)*this.scale, sprintf('%d', this.hits));
         
-        text(-this.W/2*this.scale, -16*this.scale, ...
-            sprintf('CPU: %5.1f%%\nGun: %s\nCooldown: %3.1f', ...
-                mean(this.load)*100, ...,                
-                this.txt_armed{gs}, ...
-                this.cooldown))
+%         text(-this.W/2*this.scale, -16*this.scale, ...
+%             sprintf('CPU: %5.1f%%\nGun: %s\nCooldown: %3.1f', ...
+%                 mean(this.load)*100, ...,                
+%                 this.txt_armed{gs}, ...
+%                 this.cooldown))
         
         boxX = [-this.W/2 this.W/2 this.W/2 -this.W/2 -this.W/2]'.*this.scale;
         boxY = [0 0 this.H this.H 0]'.*this.scale;
@@ -283,18 +283,6 @@ methods(Access=public)
         drawnow
         
         return
-        % SIGNALS
-%         if numel(this.hist_vx) > 1
-%             cla(this.fig_signals);
-%             this.select_history;
-%             hold on
-%             X=(-numel(this.hist_vx)+1:0)' * this.T;
-%             plot(X, this.hist_vx/this.speed, ...
-%                  X, this.hist_Vr/this.Vr_max, ...
-%                  X, this.hist_Cr/this.Vr_max);
-%             axis([-this.max_hist_time 0 -1.05 1.05])
-%             drawnow
-%         end
     end   
     
     function done = iterate(this)
@@ -375,12 +363,90 @@ methods(Access=public)
         this.C_Kn = 1/this.T;
         this.G_C = dtf(this.C_Kp + this.C_Ki/s + ...
             this.C_Kd*this.C_Kn*s/(s+this.C_Kn), this.T);
-        this.G_C.ctf
+        this.G_C.ctf;
         
         % Integrator
         this.G_I = dtf(1/s, this.T);   
     
-        this.hard_stop();
+        this.hard_stop();                
+    end
+    
+    function update_error_plot(this, axe)
+        axes(axe);
+        cla
+        hold on
+        
+        s=tf('s');
+ 
+        % step error response
+        impulse(c2d(1/s, this.T) - ...
+                c2d(1/s, this.T)*feedback(this.G_C.tf * this.G_Gun.tf * this.G_I.tf, 1));
+        % ramp error response
+        impulse(c2d(1/s^2, this.T) - ...
+                c2d(1/s^2, this.T)*feedback(this.G_C.tf * this.G_Gun.tf * this.G_I.tf, 1));
+        %title('Manual response')
+        
+        title('');
+        xlabel('');
+        ylabel('');
+    end    
+    
+    function update_response_plot(this, axe)
+        axes(axe);
+        cla
+        hold on        
+        
+        % motor speed response
+        step(this.G_Gun.tf/this.speed); % normalized to unity        
+        % controlled position response
+        stepplot(feedback(this.G_C.tf * this.G_Gun.tf * this.G_I.tf, 1));
+        axis auto
+        
+        title('');
+        ylabel('');        
+    end
+    
+    function update_siso_plot(this, axe)
+        axes(axe);
+        cla
+        hold on
+        
+        if numel(this.hist_vx) > 1
+            X=(-numel(this.hist_vx)+1:0)' * this.T;
+            plot(X, this.hist_vx/this.speed, ...
+                 X, this.hist_Vr/this.Vr_max, ...
+                 X, this.hist_Cr/this.Vr_max);
+            axis([-this.max_hist_time 0 -1.05 1.05])
+        end
+        
+        title('');
+        xlabel('');
+        ylabel('');
+        drawnow
+    end    
+    
+    function update_rlocus(this, axe, continuous)
+        axes(axe);
+        cla
+        hold on
+        
+        if continuous
+            % r-locus:
+            rlocus(this.G_C.ctf * this.G_Gun.ctf * this.G_I.ctf);
+            % poles/zeros:
+            rlocus(this.G_C.ctf, 'r', this.G_Gun.ctf * this.G_I.ctf, 'k', 0);
+            % closed-loop poles:
+            rlocus(feedback(this.G_C.ctf * this.G_Gun.ctf * this.G_I.ctf, 1), 'g', 0);
+        else
+            % r-locus:
+            rlocus(this.G_C.tf * this.G_Gun.tf * this.G_I.tf);
+            % poles/zeros:
+            rlocus(this.G_C.tf, 'r', this.G_Gun.tf * this.G_I.tf, 'k', 0);
+            % closed-loop poles:
+            rlocus(feedback(this.G_C.tf * this.G_Gun.tf * this.G_I.tf, 1), 'g', 0);
+        end
+        
+        title('');
     end
         
 end

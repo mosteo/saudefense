@@ -22,7 +22,7 @@ function varargout = sdgui(varargin)
 
 % Edit the above text to modify the response to help sdgui
 
-% Last Modified by GUIDE v2.5 25-Nov-2018 02:39:24
+% Last Modified by GUIDE v2.5 25-Nov-2018 17:59:15
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -43,8 +43,14 @@ else
 end
 % End initialization code - DO NOT EDIT
 
-function looper(sau)
-sau.iterate();
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+function looper(handles)
+handles.sau.iterate();
+handles.difficulty.Value = handles.sau.difficulty;
+sdfunc.update_difficulty_panel(handles);
+sdfunc.update_texts(handles, handles.sau);
+handles.sau.update_siso_plot(handles.siso);
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 % --- Executes just before sdgui is made visible.
 function sdgui_OpeningFcn(hObject, eventdata, handles, varargin)
@@ -66,11 +72,14 @@ imshow(diagram);
 handles.sau    = saudefense(handles.battle);
 sau = handles.sau;
 
+handles.difficulty.Value = sau.difficulty;
+sdfunc.update_difficulty_panel(handles);
+
 handles.looper = timer;
 handles.looper.ExecutionMode = 'fixedRate';
 handles.looper.Period = handles.sau.T;
 handles.looper.UserData = handles.sau;
-handles.looper.TimerFcn = @(~,~)looper(handles.sau);
+handles.looper.TimerFcn = @(~,~)looper(handles);
 
 handles.autoaim.Value = sau.auto_aim;
 handles.autofire.Value = sau.auto_fire;
@@ -80,6 +89,8 @@ handles.Kp.String = sprintf('%g', sau.C_Kp);
 handles.Ki.String = sprintf('%g', sau.C_Ki);
 handles.Kd.String = sprintf('%g', sau.C_Kd);
 handles.tau.String = sprintf('%g', sau.tau);
+
+update_LTI(handles);
 
 guidata(hObject, handles);
 disp('Ready');
@@ -284,18 +295,16 @@ end
 
 
 % --- Executes on slider movement.
-function slider2_Callback(hObject, eventdata, handles)
-% hObject    handle to slider2 (see GCBO)
+function difficulty_Callback(hObject, eventdata, handles)
+% hObject    handle to difficulty (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
-
-% Hints: get(hObject,'Value') returns position of slider
-%        get(hObject,'Min') and get(hObject,'Max') to determine range of slider
-
+handles.sau.difficulty = hObject.Value;
+sdfunc.update_difficulty_panel(handles);
 
 % --- Executes during object creation, after setting all properties.
-function slider2_CreateFcn(hObject, eventdata, handles)
-% hObject    handle to slider2 (see GCBO)
+function difficulty_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to difficulty (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    empty - handles not created until after all CreateFcns called
 
@@ -311,4 +320,24 @@ h.sau.C_Kp = str2double(h.Kp.String);
 h.sau.C_Ki = str2double(h.Ki.String);
 h.sau.C_Kd = str2double(h.Kd.String);
 h.sau.update_LTI();
+h.sau.update_response_plot(h.response);
+h.sau.update_error_plot(h.error);
+h.sau.update_rlocus(h.rlocus, h.rb_continuous.Value ~= 0);
+drawnow
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+% --- Executes on button press in rb_continuous.
+function rb_continuous_Callback(hObject, eventdata, handles)
+% hObject    handle to rb_continuous (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+handles.sau.update_rlocus(handles.rlocus, handles.rb_continuous.Value ~= 0);
+
+
+% --- Executes on button press in rb_discrete.
+function rb_discrete_Callback(hObject, eventdata, handles)
+% hObject    handle to rb_discrete (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+handles.sau.update_rlocus(handles.rlocus, handles.rb_continuous.Value ~= 0);

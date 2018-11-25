@@ -37,7 +37,7 @@ end
     
 methods(Access=public)
     
-    function this = foe(game, kind)        
+    function this = foe(game, kind, difficulty)        
         this.game = game;
         
         if nargin < 2
@@ -59,7 +59,7 @@ methods(Access=public)
             case this.MISL
                 fprintf('Incoming missile!\n')
                 this.x = round(rand)*game.W - game.W/2;
-                this.y = rand*game.H/2 + game.H/2;                
+                this.y = rand*game.H/2*(1-difficulty*0.9) + game.H/2;                
                 
                 % Go to the opposite side
                 tx  = rand*game.W/2*(-sign(this.x));
@@ -81,6 +81,9 @@ methods(Access=public)
     
     function draw(this)     
         if this.alive                        
+%             fill((this.spriteX + this.x)*this.game.scale, ...
+%                  (this.spriteY + this.y)*this.game.scale, ...
+%                   'w');
             plot((this.spriteX + this.x)*this.game.scale, ...
                  (this.spriteY + this.y)*this.game.scale, ...
                   'k');
@@ -106,7 +109,7 @@ methods(Access=public)
             this.y = 0;
         end
         
-        hit    = this.alive && (this.y <= 0);
+        hit = this.alive && (this.y <= 0);
         
         if this.alive && this.game.firing>0 && abs(this.x - this.game.x)<this.size/2
             fprintf('Hit\n');
@@ -114,6 +117,7 @@ methods(Access=public)
             this.alive = false;
             this.dying = this.dying_len;
             this.vy = this.vy / 2;
+            this.vx = this.vx / 2;
             % fix Y offset
             this.y = this.y + this.size*1/2;
         else
