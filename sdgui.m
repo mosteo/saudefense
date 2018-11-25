@@ -22,7 +22,7 @@ function varargout = sdgui(varargin)
 
 % Edit the above text to modify the response to help sdgui
 
-% Last Modified by GUIDE v2.5 22-Nov-2018 22:18:22
+% Last Modified by GUIDE v2.5 25-Nov-2018 02:39:24
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -75,6 +75,12 @@ handles.looper.TimerFcn = @(~,~)looper(handles.sau);
 handles.autoaim.Value = sau.auto_aim;
 handles.autofire.Value = sau.auto_fire;
 
+handles.period.String = sprintf('%g', sau.T);
+handles.Kp.String = sprintf('%g', sau.C_Kp);
+handles.Ki.String = sprintf('%g', sau.C_Ki);
+handles.Kd.String = sprintf('%g', sau.C_Kd);
+handles.tau.String = sprintf('%g', sau.tau);
+
 guidata(hObject, handles);
 disp('Ready');
 
@@ -103,9 +109,7 @@ function Kp_Callback(hObject, eventdata, handles)
 % hObject    handle to Kp (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
-
-% Hints: get(hObject,'String') returns contents of Kp as text
-%        str2double(get(hObject,'String')) returns contents of Kp as a double
+update_LTI(handles);
 
 
 % --- Executes during object creation, after setting all properties.
@@ -165,8 +169,10 @@ function window_DeleteFcn(hObject, eventdata, handles)
 % hObject    handle to window (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
-stop(handles.looper);
-delete(handles.looper);
+if isfield(handles, 'looper')
+    stop(handles.looper);
+    delete(handles.looper);
+end
 
 
 % --- Executes on button press in autoaim.
@@ -174,7 +180,6 @@ function autoaim_Callback(hObject, eventdata, handles)
 % hObject    handle to autoaim (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
-eventdata
 handles.sau.auto_aim = hObject.Value ~= 0;
 
 
@@ -184,3 +189,126 @@ function autofire_Callback(hObject, eventdata, handles)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 handles.sau.auto_fire = hObject.Value ~= 0;
+
+
+
+function period_Callback(hObject, eventdata, handles)
+% hObject    handle to period (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+stop(handles.looper);
+handles.sau.T = str2double(hObject.String);
+if handles.sau.T < 0.001 
+    handles.sau.T = 0.001;
+    handles.period.String= '0.001';
+end
+handles.looper.Period = handles.sau.T;
+handles.sau.update_LTI();
+start(handles.looper);
+
+
+% --- Executes during object creation, after setting all properties.
+function period_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to period (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+
+
+function Ki_Callback(hObject, eventdata, handles)
+% hObject    handle to Ki (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+update_LTI(handles);
+
+
+% --- Executes during object creation, after setting all properties.
+function Ki_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to Ki (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+
+
+function Kd_Callback(hObject, eventdata, handles)
+% hObject    handle to Kd (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+update_LTI(handles);
+
+
+% --- Executes during object creation, after setting all properties.
+function Kd_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to Kd (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+
+
+function tau_Callback(hObject, eventdata, handles)
+% hObject    handle to tau (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+update_LTI(handles);
+
+
+% --- Executes during object creation, after setting all properties.
+function tau_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to tau (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+
+% --- Executes on slider movement.
+function slider2_Callback(hObject, eventdata, handles)
+% hObject    handle to slider2 (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'Value') returns position of slider
+%        get(hObject,'Min') and get(hObject,'Max') to determine range of slider
+
+
+% --- Executes during object creation, after setting all properties.
+function slider2_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to slider2 (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: slider controls usually have a light gray background.
+if isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor',[.9 .9 .9]);
+end
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+function update_LTI(h)
+h.sau.tau  = str2double(h.tau.String);
+h.sau.C_Kp = str2double(h.Kp.String);
+h.sau.C_Ki = str2double(h.Ki.String);
+h.sau.C_Kd = str2double(h.Kd.String);
+h.sau.update_LTI();
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

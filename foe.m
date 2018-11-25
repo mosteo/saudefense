@@ -97,7 +97,7 @@ methods(Access=public)
             this.alive = false;
         end        
         
-        if this.kind == this.BOMB
+        if this.kind == this.BOMB || this.dying > 0
             this.vy = this.vy + this.accel*this.game.T;
         end
         

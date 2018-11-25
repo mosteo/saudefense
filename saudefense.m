@@ -5,19 +5,15 @@ classdef saudefense < handle
 % Plot controlled position response
 % Plot controlled rlocus
     
-properties(Constant)
-    T       = 1/20  % period
-        
+properties(Constant)        
     %Ts      = 2     % Motor response time
-    %OS      = 0.1   % Motor overshoot    
-    tau     = 0.25   % 1st order gun model
-    speed   = 10    % Gun m/s (static motor gain)
+    %OS      = 0.1   % Motor overshoot        
     
     scale   = 0.1   % scale to window
     W       = 90    % world width
     H       = 160   % world height
     Vr_max  = 5
-    v_arm   = saudefense.speed/10   % max speed allowing fire
+    v_arm   = 1   % max speed allowing fire
     
     foe_lambda = 2/4 % Incomings per second (lambda for poisson)
     
@@ -27,6 +23,8 @@ end
 
 properties        
     % Timing
+    T       = 1/20  % period
+    
     load    = zeros(1, 10)  % CPU use in %1
     load_len= 10      % Samples to avg        
     
@@ -58,6 +56,9 @@ properties
     auto_fire = true
         
     % SAU things
+    tau     = 0.25  % 1st order gun model
+    speed   = 10    % Gun m/s (static motor gain)
+    
     G_Gun           % gun's TF    
     G_C             % controller
     G_I             % sensor (integrator)        
@@ -65,7 +66,7 @@ properties
     C_Kp = 0.1 % PID constants    
     C_Ki = 0.0       
     C_Kd = 0.0
-    C_Kn = saudefense.T   % Filter freq (hf pole)
+    C_Kn = 1/20   % Filter freq (hf pole)
     
     % History
     max_hist_time = 10 % Seconds of history to keep
@@ -92,25 +93,8 @@ end
 
 methods(Access=public)
     
-    function this = saudefense(battle_handle)
-        % LTI SETUP
-        s = tf('s');
-        
-        % 2nd order gun
-        %zwn=4/this.Ts;       
-        %z=-log(this.OS)/sqrt(pi^2 + log(this.OS)^2);
-        %wn=zwn/z;                
-        %this.G_Gun = dtf(wn^2/(s^2+2*zwn*s+wn^2)*this.speed, this.T);                
-        
-        % 1st order gun
-        this.G_Gun = dtf(this.speed/(this.tau*s+1), this.T);
-        this.G_Gun.ctf
-        
-        this.G_C = dtf(this.C_Kp + this.C_Ki/s + ...
-            this.C_Kd*this.C_Kn*s/(s+this.C_Kn), this.T);
-        this.G_C.ctf
-        
-        this.G_I = dtf(1/s, this.T);                
+    function this = saudefense(battle_handle)                
+        this.update_LTI();                             
         
         % BATTLE SETUP
         set(battle_handle, 'DefaultLineLineWidth', 2);
@@ -126,23 +110,21 @@ methods(Access=public)
         
         return;        
         
-        this.fig_signals = this.select_history;
-        ylabel('Motor speed')
-        xlabel('Seconds from now')
-        title('\Omega(s) Input/Output')
-        
-        this.select_analysis;
-        hold on
-        % motor speed response
-        step(this.G_Gun.tf/this.speed); % normalized to unity        
-        % controlled position response
-        step(feedback(this.G_C.tf * this.G_Gun.tf * this.G_I.tf, 1));
-        % ramp error response
-        impulse(c2d(1/s^2, this.T) - ...
-                c2d(1/s^2, this.T)*feedback(this.G_C.tf * this.G_Gun.tf * this.G_I.tf, 1));
-        %title('Manual response')
-        
-        this.loop;
+%         this.fig_signals = this.select_history;
+%         ylabel('Motor speed')
+%         xlabel('Seconds from now')
+%         title('\Omega(s) Input/Output')
+%         
+%         this.select_analysis;
+%         hold on
+%         % motor speed response
+%         step(this.G_Gun.tf/this.speed); % normalized to unity        
+%         % controlled position response
+%         step(feedback(this.G_C.tf * this.G_Gun.tf * this.G_I.tf, 1));
+%         % ramp error response
+%         impulse(c2d(1/s^2, this.T) - ...
+%                 c2d(1/s^2, this.T)*feedback(this.G_C.tf * this.G_Gun.tf * this.G_I.tf, 1));
+%         %title('Manual response')
     end
     
     function compute(this)
@@ -223,11 +205,7 @@ methods(Access=public)
         % Collision
         if abs(this.x) > this.W/2
             this.x = this.W/2 * sign(this.x);
-            % reset states
-            this.G_C.reset_state();
-            this.G_Gun.reset_state();
-            % integrator stated fixed to next value
-            this.G_I.set_state(this.x);
+            this.hard_stop();
         end
         %fprintf('%6.3f %6.3f\n', this.x, this.G_I.state);
         
@@ -306,17 +284,17 @@ methods(Access=public)
         
         return
         % SIGNALS
-        if numel(this.hist_vx) > 1
-            cla(this.fig_signals);
-            this.select_history;
-            hold on
-            X=(-numel(this.hist_vx)+1:0)' * this.T;
-            plot(X, this.hist_vx/this.speed, ...
-                 X, this.hist_Vr/this.Vr_max, ...
-                 X, this.hist_Cr/this.Vr_max);
-            axis([-this.max_hist_time 0 -1.05 1.05])
-            drawnow
-        end
+%         if numel(this.hist_vx) > 1
+%             cla(this.fig_signals);
+%             this.select_history;
+%             hold on
+%             X=(-numel(this.hist_vx)+1:0)' * this.T;
+%             plot(X, this.hist_vx/this.speed, ...
+%                  X, this.hist_Vr/this.Vr_max, ...
+%                  X, this.hist_Cr/this.Vr_max);
+%             axis([-this.max_hist_time 0 -1.05 1.05])
+%             drawnow
+%         end
     end   
     
     function done = iterate(this)
@@ -371,6 +349,40 @@ methods(Access=public)
         end
     end
     
+    function hard_stop(this)
+    % When stopping abruptly or reconfiguring
+        this.G_C.reset_state();
+        this.G_Gun.reset_state();
+        % integrator stated fixed to next value
+        this.G_I.set_state(this.x);
+    end
+    
+    function update_LTI(this)
+    % Update things on the fly... yikes!
+    % For changes in PID parameters, T, ...
+        s=tf('s');
+        
+        % 2nd order gun
+        %zwn=4/this.Ts;       
+        %z=-log(this.OS)/sqrt(pi^2 + log(this.OS)^2);
+        %wn=zwn/z;                
+        %this.G_Gun = dtf(wn^2/(s^2+2*zwn*s+wn^2)*this.speed, this.T);                
+        
+        % 1st order gun
+        this.G_Gun = dtf(this.speed/(this.tau*s+1), this.T);
+
+        % Controller
+        this.C_Kn = 1/this.T;
+        this.G_C = dtf(this.C_Kp + this.C_Ki/s + ...
+            this.C_Kd*this.C_Kn*s/(s+this.C_Kn), this.T);
+        this.G_C.ctf
+        
+        % Integrator
+        this.G_I = dtf(1/s, this.T);   
+    
+        this.hard_stop();
+    end
+        
 end
    
     
