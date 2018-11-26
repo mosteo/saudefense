@@ -140,7 +140,7 @@ disp('Ready');
 % end
 
 % UIWAIT makes sdgui wait for user response (see UIRESUME)
-uiwait(handles.window);
+%uiwait(handles.window);
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 

@@ -123,31 +123,7 @@ methods(Access=public)
         this.difficulty = ...
             min(1, this.difficulty + 1/this.difficulty_period*this.T);
         
-        % FOES
-        if rand < poisspdf(1, (this.foe_lambda + this.difficulty/2)*this.T)
-            this.foes{end+1} = foe(this, 2-(rand>this.difficulty*0.9), this.difficulty);
-        end
-        
-        this.target = 0;
-        i = 1;        
-        while i <= numel(this.foes)
-            [alive, hit, destroyed] = this.foes{i}.update();
-            
-            this.lives = this.lives - hit;
-            this.hits  = this.hits + destroyed;
-            
-            if ~alive || hit
-                this.foes(i) = [];
-            else 
-                if this.foes{i}.alive && ...
-                   this.foes{i}.y < this.H - this.foes{i}.size && ...
-                        (this.target == 0 || ...                         
-                         this.foes{i}.y < this.foes{this.target}.y)
-                    this.target = i;
-                end
-                i = i + 1;
-            end
-        end
+        this.foeing();
         
         this.fire();
                 
@@ -201,6 +177,64 @@ methods(Access=public)
         %fprintf('%6.3f %6.3f\n', this.x, this.G_I.state);
     end
     
+    function foeing(this)
+        % Generate?
+        if rand < poisspdf(1, (this.foe_lambda + this.difficulty/2)*this.T)
+            this.foes{end+1} = foe(this, 2-(rand>this.difficulty*0.9), this.difficulty);
+        end
+        
+        % Move        
+        i = 1;        
+        while i <= numel(this.foes)
+            [alive, hit, destroyed] = this.foes{i}.update();
+            
+            this.lives = this.lives - hit;
+            this.hits  = this.hits + destroyed;
+            
+            % adjust target if going away
+            if ~alive || destroyed
+                if this.target == i
+                    this.target = 0;
+                elseif this.target > i
+                    this.target = this.target - 1;
+                end
+            end
+            
+            % list housekeeping
+            if ~alive || hit                
+                this.foes(i) = [];
+            else 
+                i = i + 1;
+            end
+        end
+        
+        % Targeting        
+        best = 0;
+        for i = 1:numel(this.foes)
+            if ~this.foes{i}.alive; continue; end 
+            % already dead
+
+            if this.foes{i}.y > this.H - this.foes{i}.size; continue; end
+            % Barely visible, do not consider yet
+
+            if this.target ~= 0 && this.foes{i}.y > this.H/2; continue; end
+            % Too high to merit switch            
+
+            score = this.W/abs(this.foes{i}.x - this.x + 1)*0.25; 
+            % The closer the better
+
+            % But the lower the better
+            if this.foes{i}.y <= this.H/2
+                score = score + this.H/2/(this.foes{i}.y + 1); % The lower the better
+            end
+
+            if score > best
+                best = score;
+                this.target = i;
+            end
+        end
+    end
+    
     function fire(this)
         % Cooldown
         if this.cooldown > 0
@@ -246,13 +280,14 @@ methods(Access=public)
         
         % lives
         for i=1:this.lives
-            plot([-this.W/2 this.W/2]'*this.scale, ...
-                 ones(2,1)*i*2*this.scale, 'g');
+            plot(this.fig, ...
+            [-this.W/2 this.W/2]'*this.scale, ...
+             ones(2,1)*i*2*this.scale, 'g');
         end
         
         % Foes
         for i = 1:numel(this.foes)
-            this.foes{i}.draw()
+            this.foes{i}.draw(this.fig)
         end
         
         % Gun status
@@ -276,14 +311,15 @@ methods(Access=public)
         
         boxX = [-this.W/2 this.W/2 this.W/2 -this.W/2 -this.W/2]'.*this.scale;
         boxY = [0 0 this.H this.H 0]'.*this.scale;
-        plot(boxX, boxY, 'k');
+        plot(this.fig, boxX, boxY, 'k');
         
-        plot(this.x*this.scale, 0, this.mark_armed{gs}, 'MarkerSize', foe.size*4)
+        plot(this.fig, ...
+            this.x*this.scale, 0, this.mark_armed{gs}, 'MarkerSize', foe.size*4)
         
         if (this.firing > 0)
             rayX = [this.x this.x]*this.scale;
             rayY = [0 this.H]*this.scale;
-            plot(rayX', rayY', 'r-');
+            plot(this.fig, rayX', rayY', 'r-');
         end        
         
         %axis([-this.W/2 this.W/2 0 this.H]*this.scale)
@@ -374,80 +410,85 @@ methods(Access=public)
     
     function update_error_plot(this, axe)
         axes(axe);
-        cla
-        hold on
+        cla(axe);
+        hold(axe, 'on');
         
         s=tf('s');
  
         % step error response
-        impulse(c2d(1/s, this.T) - ...
+        impulse(axe, ...
+                c2d(1/s, this.T) - ...
                 c2d(1/s, this.T)*feedback(this.G_C.tf * this.G_Gun.tf * this.G_I.tf, 1));
         % ramp error response
-        impulse(c2d(1/s^2, this.T) - ...
+        impulse(axe, ...
+                c2d(1/s^2, this.T) - ...
                 c2d(1/s^2, this.T)*feedback(this.G_C.tf * this.G_Gun.tf * this.G_I.tf, 1));
         %title('Manual response')
         
-        title('');
-        xlabel('');
-        ylabel('');
+        title(axe, '');
+        xlabel(axe, '');
+        ylabel(axe, '');
+        drawnow
     end    
     
     function update_response_plot(this, axe)        
         axes(axe);
-        cla
-        hold on        
+        cla(axe);
+        hold(axe, 'on');   
         
         % motor speed response
-        step(this.G_Gun.tf/this.speed); % normalized to unity        
+        step(axe, this.G_Gun.tf/this.speed); % normalized to unity        
         % controlled position response
-        step(feedback(this.G_C.tf * this.G_Gun.tf * this.G_I.tf, 1));
+        step(axe, feedback(this.G_C.tf * this.G_Gun.tf * this.G_I.tf, 1));
         axis auto
         
-        title('');
-        ylabel('');        
+        title(axe, '');
+        ylabel(axe, '');     
+        drawnow
     end
     
     function update_siso_plot(this, axe)
         axes(axe);
-        cla
-        hold on
+        cla(axe);
+        hold(axe, 'on');
         
         if numel(this.hist_vx) > 1
             X=(-numel(this.hist_vx)+1:0)' * this.T;
-            plot(X, this.hist_vx/this.speed, ...
+            plot(axe, ...
+                 X, this.hist_vx/this.speed, ...
                  X, this.hist_Vr/this.Vr_max, ...
                  X, this.hist_Cr/this.Vr_max);
             axis([-this.max_hist_time 0 -1.05 1.05])
         end
         
-        title('');
-        xlabel('');
-        ylabel('');
+        title(axe, '');
+        xlabel(axe, '');
+        ylabel(axe, '');
         drawnow
     end    
     
     function update_rlocus(this, axe, continuous)
         axes(axe);
-        cla
-        hold on
+        cla(axe);
+        hold(axe, 'on');
         
         if continuous
             % r-locus:
-            rlocus(this.G_C.ctf * this.G_Gun.ctf * this.G_I.ctf);
+            rlocus(axe, this.G_C.ctf * this.G_Gun.ctf * this.G_I.ctf);
             % poles/zeros:
-            rlocus(this.G_C.ctf, 'r', this.G_Gun.ctf * this.G_I.ctf, 'k', 0);
+            rlocus(axe, this.G_C.ctf, 'r', this.G_Gun.ctf * this.G_I.ctf, 'k', 0);
             % closed-loop poles:
-            rlocus(feedback(this.G_C.ctf * this.G_Gun.ctf * this.G_I.ctf, 1), 'g', 0);
+            rlocus(axe, feedback(this.G_C.ctf * this.G_Gun.ctf * this.G_I.ctf, 1), 'g', 0);
         else
             % r-locus:
-            rlocus(this.G_C.tf * this.G_Gun.tf * this.G_I.tf);
+            rlocus(axe, this.G_C.tf * this.G_Gun.tf * this.G_I.tf);
             % poles/zeros:
-            rlocus(this.G_C.tf, 'r', this.G_Gun.tf * this.G_I.tf, 'k', 0);
+            rlocus(axe, this.G_C.tf, 'r', this.G_Gun.tf * this.G_I.tf, 'k', 0);
             % closed-loop poles:
-            rlocus(feedback(this.G_C.tf * this.G_Gun.tf * this.G_I.tf, 1), 'g', 0);
+            rlocus(axe, feedback(this.G_C.tf * this.G_Gun.tf * this.G_I.tf, 1), 'g', 0);
         end
         
-        title('');
+        title(axe, '');
     end
     
     function tic(this)
