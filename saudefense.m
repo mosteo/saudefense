@@ -9,7 +9,7 @@ properties(Constant)
     H       = 160   % world height
     Vr_max  = 5
     v_arm   = 10  % max speed allowing fire
-    a_arm   = 10  % max accel allowing fire
+    a_arm   =  2  % max accel allowing fire
     
     foe_lambda = 1/4 % Incomings per second (lambda for poisson)
     % initial rate, that increases with difficulty
@@ -72,7 +72,7 @@ properties
     C_Kp = 0.1 % PID constants    
     C_Ki = 0.0       
     C_Kd = 0.0
-    C_Kn = 1/20   % Filter freq (hf pole)
+    C_Kn = 50   % Filter freq (hf pole)
     
     U_auto
     
@@ -101,8 +101,10 @@ end
 
 methods(Access=public)
     
-    function this = saudefense(battle_handle)                
-        this.update_LTI();                             
+    function this = saudefense(battle_handle, initialize)                
+        if initialize
+            this.update_LTI();                             
+        end
         
         % BATTLE SETUP
         set(battle_handle, 'DefaultLineLineWidth', 2);
@@ -113,13 +115,6 @@ methods(Access=public)
         axis(battle_handle, [-this.W/2 this.W/2 0 this.H]*this.scale)        
         drawnow
         this.fig = battle_handle;
-        
-        return;        
-        
-%         this.fig_signals = this.select_history;
-%         ylabel('Motor speed')
-%         xlabel('Seconds from now')
-%         title('\Omega(s) Input/Output')
     end
     
     function compute(this)
@@ -353,23 +348,26 @@ methods(Access=public)
     % For changes in PID parameters, T, ...
         s=tf('s');
         
-        % 2nd order gun
-        %zwn=4/this.Ts;       
-        %z=-log(this.OS)/sqrt(pi^2 + log(this.OS)^2);
-        %wn=zwn/z;                
-        %this.G_Gun = dtf(wn^2/(s^2+2*zwn*s+wn^2)*this.speed, this.T);                
+        %this.C_Kn = 1/this.T;
         
+        fprintf('P=%.2f I=%.2f D=%.2f N=%.2f\n', ...
+            this.C_Kp, this.C_Ki, this.C_Kd, this.C_Kn);
+                
         % 1st order gun
         this.G_Gun = dtf(this.speed/(this.tau*s+1), this.T);
 
         % Controller
-        this.C_Kn = 1/this.T;
         this.G_C = dtf(this.C_Kp + this.C_Ki/s + ...
             this.C_Kd*this.C_Kn*s/(s+this.C_Kn), this.T);
-        this.G_C.ctf;
+        this.G_C.ctf
         
         % Integrator
         this.G_I = dtf(1/s, this.T);   
+        
+        disp('ZEROS');
+        zero(feedback(this.G_C.ctf*this.G_Gun.ctf*this.G_I.ctf, 1))
+        disp('POLES');
+        pole(feedback(this.G_C.ctf*this.G_Gun.ctf*this.G_I.ctf, 1))
     
         this.hard_stop();                
     end
@@ -402,7 +400,7 @@ methods(Access=public)
         % motor speed response
         step(this.G_Gun.tf/this.speed); % normalized to unity        
         % controlled position response
-        stepplot(feedback(this.G_C.tf * this.G_Gun.tf * this.G_I.tf, 1));
+        step(feedback(this.G_C.tf * this.G_Gun.tf * this.G_I.tf, 1));
         axis auto
         
         title('');

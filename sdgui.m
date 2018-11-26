@@ -22,7 +22,7 @@ function varargout = sdgui(varargin)
 
 % Edit the above text to modify the response to help sdgui
 
-% Last Modified by GUIDE v2.5 25-Nov-2018 21:06:58
+% Last Modified by GUIDE v2.5 26-Nov-2018 18:06:44
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -45,15 +45,33 @@ end
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 function looper(handles)
-if isfield(handles, 'sau') && ~handles.closing
+handles.props.looping = true;
+if handles.props.pending
+    handles.props.pending = false;
+    update_LTI(handles, true);
+end
+% disp('>')
+if isfield(handles, 'sau') && ~handles.props.closing && ~handles.props.busy
     handles.sau.tic()
     handles.sau.iterate();
-    handles.difficulty.Value = handles.sau.difficulty;
+    
+    if handles.props.diff_changed
+        handles.sau.difficulty = handles.props.difficulty;
+        handles.props.diff_changed = false;
+    else
+        handles.difficulty.Value = handles.sau.difficulty;
+    end
     sdfunc.update_difficulty_panel(handles);
-    %handles.sau.update_siso_plot(handles.siso);
+    
+    
+    if handles.siso_enabled.Value
+        handles.sau.update_siso_plot(handles.siso);
+    end
     handles.sau.toc()
     sdfunc.update_texts(handles, handles.sau);    
 end
+handles.props.looping = false;
+% disp('<')
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 % --- Executes just before sdgui is made visible.
@@ -69,16 +87,25 @@ handles.output = hObject;
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % MY OWN INITIALIZATION
+handles.initializing.Position = [0 0 1 1];
+drawnow
+
+handles.props = props;
+handles.props.busy = true;
+
 axes(handles.diagram);
 diagram = imread('diagram.jpg');
 dpos    = handles.diagram.Position;
 diagram = imresize(diagram, [dpos(4) dpos(3)]);
 imshow(diagram);
 
-handles.sau    = saudefense(handles.battle);
+handles.sau    = saudefense(handles.battle, false);
 sau = handles.sau;
 
-handles.closing = false;
+handles.closing = false; % True after figure starts closing
+handles.looping = false; % True while timer callback running
+% Apparently there's no way to do proper syncing in matlab...
+% This is thread unsafe and racy but might be better than nothing
 
 handles.difficulty.Value = sau.difficulty;
 sdfunc.update_difficulty_panel(handles);
@@ -88,6 +115,7 @@ handles.looper.ExecutionMode = 'fixedRate';
 handles.looper.Period = handles.sau.T;
 handles.looper.UserData = handles.sau;
 handles.looper.TimerFcn = @(~,~)looper(handles);
+handles.looper.StartDelay = 0.2;
 
 handles.autoaim.Value = sau.auto_aim;
 handles.autofire.Value = sau.auto_fire;
@@ -98,9 +126,13 @@ handles.Ki.String = sprintf('%g', sau.C_Ki);
 handles.Kd.String = sprintf('%g', sau.C_Kd);
 handles.tau.String = sprintf('%g', sau.tau);
 
+guidata(hObject, handles);
+
 update_LTI(handles);
 
-guidata(hObject, handles);
+handles.props.busy   = false;
+handles.start.Enable = 'on';
+handles.initializing.Visible = 'off';
 disp('Ready');
 
 % while true
@@ -120,7 +152,8 @@ function varargout = sdgui_OutputFcn(hObject, eventdata, handles)
 % handles    structure with handles and user data (see GUIDATA)
 
 % Get default command line output from handles structure
-varargout{1} = handles.output;
+%varargout{1} = handles.output;
+varargout{1} = [];
 
 
 
@@ -171,16 +204,20 @@ function start_Callback(hObject, eventdata, handles)
 % hObject    handle to start (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
-if strcmpi(handles.looper.Running, 'off')
+handles.props.busy = true;
+if ~handles.props.running
+    handles.start.String = 'Pause';
+    handles.props.running = true;
     start(handles.looper);
-    handles.start.String = 'Pause';    
-else
-    stop(handles.looper);    
+else       
     handles.start.String = 'GO!';    
+    stop(handles.looper);
+    handles.props.running = false;
 end
 handles.start.Enable = 'off';
 drawnow
 handles.start.Enable = 'on';
+handles.props.busy = false;
 
 
 % --- Executes during object deletion, before destroying properties.
@@ -215,7 +252,9 @@ function period_Callback(hObject, eventdata, handles)
 % hObject    handle to period (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
-stop(handles.looper);
+if handles.props.running    
+    stop(handles.looper);
+end
 handles.sau.T = str2double(hObject.String);
 if handles.sau.T < 0.001 
     handles.sau.T = 0.001;
@@ -223,8 +262,9 @@ if handles.sau.T < 0.001
 end
 handles.looper.Period = handles.sau.T;
 handles.sau.update_LTI();
-start(handles.looper);
-
+if handles.props.running
+    start(handles.looper);
+end
 
 % --- Executes during object creation, after setting all properties.
 function period_CreateFcn(hObject, eventdata, handles)
@@ -307,8 +347,9 @@ function difficulty_Callback(hObject, eventdata, handles)
 % hObject    handle to difficulty (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
-handles.sau.difficulty = hObject.Value;
-sdfunc.update_difficulty_panel(handles);
+handles.sau.difficulty     = hObject.Value;
+handles.props.diff_changed = true;
+handles.props.difficulty   = hObject.Value;
 
 % --- Executes during object creation, after setting all properties.
 function difficulty_CreateFcn(hObject, eventdata, handles)
@@ -322,7 +363,16 @@ if isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColo
 end
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-function update_LTI(h)
+function update_LTI(h, force)
+if nargin < 2
+    force = false;
+end
+if h.props.running && ~force
+    h.props.pending = true;
+    return
+end
+h.updating.Visible = 'on';
+drawnow
 h.sau.tau  = str2double(h.tau.String);
 h.sau.C_Kp = str2double(h.Kp.String);
 h.sau.C_Ki = str2double(h.Ki.String);
@@ -331,6 +381,7 @@ h.sau.update_LTI();
 h.sau.update_response_plot(h.response);
 h.sau.update_error_plot(h.error);
 h.sau.update_rlocus(h.rlocus, h.rb_continuous.Value ~= 0);
+h.updating.Visible = 'off';
 drawnow
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -356,9 +407,21 @@ function window_CloseRequestFcn(hObject, eventdata, handles)
 % hObject    handle to window (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
+if handles.props.busy; return; end
+if handles.props.looping || handles.props.running
+    start_Callback(handles.start, eventdata, handles);
+    return
+end
+handles.props.closing = true;
 stop(handles.looper);
-delete(handles.looper);
-handles.closing = true;
-pause(handles.sau.T*2);
-% Hint: delete(hObject) closes the figure
+%delete(handles.looper);
 delete(hObject);
+
+
+% --- Executes on button press in siso_enabled.
+function siso_enabled_Callback(hObject, eventdata, handles)
+% hObject    handle to siso_enabled (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hint: get(hObject,'Value') returns toggle state of siso_enabled

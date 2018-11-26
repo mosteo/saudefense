@@ -5,8 +5,8 @@ properties(Constant)
     accel  = 1;
     dying_len = 2;
     
-    missile_min_spd = 8;
-    missile_max_spd = 12;
+    missile_min_spd = 10;
+    missile_max_spd = 15;
     
     BOMB = 1
     MISL = 2
@@ -65,10 +65,14 @@ methods(Access=public)
                 tx  = rand*game.W/2*(-sign(this.x));
                 h   = sqrt((tx - this.x)^2 + this.y^2);
                 spd = this.missile_min_spd + rand*(this.missile_max_spd - this.missile_min_spd);
-                cs = (tx - this.x)/h;
-                sn = this.y/h;
+                cs = (tx - this.x)/h;                
+                sn = this.y/h;                
                 this.vx = cs * spd;
                 this.vy = sn * spd;
+                
+                % Drawing override
+                cs = 0;
+                sn = 1;
                 
                 rot = [cs -sn; sn cs];                
                 sprite = [this.mslX' this.mslY']*rot;
@@ -112,7 +116,7 @@ methods(Access=public)
         hit = this.alive && (this.y <= 0);
         
         if this.alive && this.game.firing>0 && abs(this.x - this.game.x)<=this.size/2
-            fprintf('Hit\n');
+            fprintf('Destroyed!\n');
             destroyed = true;
             this.alive = false;
             this.dying = this.dying_len;
