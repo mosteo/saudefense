@@ -232,26 +232,29 @@ methods(Access=public)
         if this.man_target > 0 
             this.target = this.man_target;
         else
-            best = 0;
-            for i = 1:numel(this.foes)
+            best = Inf;
+            for i = 1:numel(this.foes)                                                                
                 if ~this.foes{i}.alive; continue; end 
                 % already dead
 
                 if this.foes{i}.y > this.H - this.foes{i}.size; continue; end
                 % Barely visible, do not consider yet
 
-                if this.target ~= 0 && this.foes{i}.y > this.H/2; continue; end
-                % Too high to merit switch            
-
-                score = this.W/abs(this.foes{i}.x - this.x + 1)*0.25; 
-                % The closer the better
-
-                % But the lower the better
-                if this.foes{i}.y <= this.H/2
-                    score = score + this.H/2/(this.foes{i}.y + 1); % The lower the better
-                end
-
-                if score > best
+                score = norm([this.x - this.foes{i}.x; this.foes{i}.y]);
+                
+                % Old bad method (OJO!! era best mayor, ahora es menor
+%                 if this.target ~= 0 && this.foes{i}.y > this.H/2; continue; end
+%                 % Too high to merit switch            
+% 
+%                 score = this.W/abs(this.foes{i}.x - this.x + 1)*0.25; 
+%                 % The closer the better
+% 
+%                 % But the lower the better
+%                 if this.foes{i}.y <= this.H/2
+%                     score = score + this.H/2/(this.foes{i}.y + 1); % The lower the better
+%                 end
+% 
+                if score < best
                     best = score;
                     this.target = i;
                 end
