@@ -13,7 +13,7 @@ properties(Constant)
     
     size = 3;
     
-    bombY = [0 1 2 3 4 4 3 2 1 0]'*foe.size/2;
+    bombY = ([0 1 2 3 4 4 3 2 1 0]' - 1.5)*foe.size/2;
     bombX = [0 1 1 0.2 1 -1 -0.2 -1 -1 0]'*foe.size/2;
     
     mslX = [0 1 2 1 -2 -4 -4 -2 0];
@@ -24,6 +24,8 @@ end
 
 properties
     x, y, vx, vy    
+    
+    id % unique id so change of target is easier to keep track of
         
     kind
     alive = true
@@ -45,6 +47,8 @@ methods(Access=public)
         end
         
         this.kind = kind;
+        
+        this.id = rand;
         
         switch kind 
             case this.BOMB

@@ -22,7 +22,7 @@ function varargout = sdgui(varargin)
 
 % Edit the above text to modify the response to help sdgui
 
-% Last Modified by GUIDE v2.5 26-Nov-2018 18:06:44
+% Last Modified by GUIDE v2.5 27-Nov-2018 20:54:57
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -425,3 +425,9 @@ function siso_enabled_Callback(hObject, eventdata, handles)
 % handles    structure with handles and user data (see GUIDATA)
 
 % Hint: get(hObject,'Value') returns toggle state of siso_enabled
+
+
+% --- Executes on mouse motion over figure - except title and menu.
+function window_WindowButtonMotionFcn(hObject, eventdata, handles)
+% DOES NOTHING BUT IS NEEDED TO ENABLE FLUID MOUSE COORDS CAPTURE
+% See https://www.mathworks.com/help/matlab/ref/matlab.graphics.axis.axes-properties.html

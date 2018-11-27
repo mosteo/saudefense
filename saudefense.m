@@ -14,6 +14,8 @@ properties(Constant)
     foe_lambda = 1/4 % Incomings per second (lambda for poisson)
     % initial rate, that increases with difficulty
     
+    foe_manual_dist = 16 % Distance for a target to be considered (in manual targeting)        
+    
     txt_armed={'disarmed', 'armed', 'cooling down', 'firing'}
     mark_armed={'o','^', 'v', '^'}
     
@@ -43,7 +45,11 @@ properties
     firing   = 0     % time left in current firing
     firing_len = 0.5 % time a firing lasts
     
-    target = 0
+    target     = 0   % Current targeted foe index
+    man_target = 0   % Current foe under mouse index
+    
+    target_reticle = reticle()
+    manual_reticle = reticle()
     
     difficulty = 0;
     
@@ -183,7 +189,7 @@ methods(Access=public)
             this.foes{end+1} = foe(this, 2-(rand>this.difficulty*0.9), this.difficulty);
         end
         
-        % Move        
+        % Move 
         i = 1;        
         while i <= numel(this.foes)
             [alive, hit, destroyed] = this.foes{i}.update();
@@ -206,31 +212,49 @@ methods(Access=public)
             else 
                 i = i + 1;
             end
+        end         
+        
+        % Find closest to mouse
+        mouse   = this.fig.CurrentPoint/this.scale;        
+        cl_dist = Inf;
+        this.man_target = 0;        
+        for i = 1:numel(this.foes)
+            if ~this.foes{i}.alive; continue; end % disintegrating
+            d = norm([mouse(1,1) - this.foes{i}.x; ...
+                      mouse(1,2) - this.foes{i}.y]);
+            if d < this.foe_manual_dist && d < cl_dist
+                this.man_target = i;
+                cl_dist = d;
+            end
         end
         
         % Targeting        
-        best = 0;
-        for i = 1:numel(this.foes)
-            if ~this.foes{i}.alive; continue; end 
-            % already dead
+        if this.man_target > 0 
+            this.target = this.man_target;
+        else
+            best = 0;
+            for i = 1:numel(this.foes)
+                if ~this.foes{i}.alive; continue; end 
+                % already dead
 
-            if this.foes{i}.y > this.H - this.foes{i}.size; continue; end
-            % Barely visible, do not consider yet
+                if this.foes{i}.y > this.H - this.foes{i}.size; continue; end
+                % Barely visible, do not consider yet
 
-            if this.target ~= 0 && this.foes{i}.y > this.H/2; continue; end
-            % Too high to merit switch            
+                if this.target ~= 0 && this.foes{i}.y > this.H/2; continue; end
+                % Too high to merit switch            
 
-            score = this.W/abs(this.foes{i}.x - this.x + 1)*0.25; 
-            % The closer the better
+                score = this.W/abs(this.foes{i}.x - this.x + 1)*0.25; 
+                % The closer the better
 
-            % But the lower the better
-            if this.foes{i}.y <= this.H/2
-                score = score + this.H/2/(this.foes{i}.y + 1); % The lower the better
-            end
+                % But the lower the better
+                if this.foes{i}.y <= this.H/2
+                    score = score + this.H/2/(this.foes{i}.y + 1); % The lower the better
+                end
 
-            if score > best
-                best = score;
-                this.target = i;
+                if score > best
+                    best = score;
+                    this.target = i;
+                end
             end
         end
     end
@@ -288,6 +312,18 @@ methods(Access=public)
         % Foes
         for i = 1:numel(this.foes)
             this.foes{i}.draw(this.fig)
+        end
+        
+        % Reticle
+        if this.target > 0 
+            this.target_reticle.draw(this.fig, this.foes{this.target}.id, ...
+                this.foes{this.target}.x, this.foes{this.target}.y, ...
+                this.scale, 'r');
+        end
+        if this.man_target > 0 
+            this.manual_reticle.draw(this.fig, this.foes{this.man_target}.id, ...
+                this.foes{this.man_target}.x, this.foes{this.man_target}.y, ...
+                this.scale, 'r:');
         end
         
         % Gun status
