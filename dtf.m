@@ -1,20 +1,17 @@
 % A discretized transfer function
 %   to be used in step-by-step fashion
 
-classdef dtf < handle
+classdef dtf < i_tf
     
 properties(Access=public)
-    ctf % Original continuous TF from what it was initialized
-% end    
-% properties(Access=private) % To be made private after debug
-    tf
     state
+    tf
 end
 
 methods(Access=public)
     
     function this = dtf(ctf, period)
-        this.ctf   = ctf;
+        this@i_tf(ctf, period);
         this.tf    = c2d(ctf, period);
         this.state = zeros(numel(this.tf.den{1})-1, 1);
     end
