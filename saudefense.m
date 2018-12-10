@@ -71,14 +71,16 @@ properties
     tau     = 0.05  % 1st order gun model
     speed   = 10    % Gun m/s (static motor gain)
     
-    G_Gun           % gun's TF    
-    G_C             % controller
-    G_I             % sensor (integrator)        
+%     G_Gun           % gun's TF    
+%     G_C             % controller
+%     G_I             % sensor (integrator)   
     
-    C_Kp = 0.1 % PID constants    
-    C_Ki = 0.0       
-    C_Kd = 0.0
-    C_Kn = 50   % Filter freq (hf pole)
+    i_loop % loop instance, a simplified TF with position input/output
+    
+%     C_Kp = 0.1 % PID constants    
+%     C_Ki = 0.0       
+%     C_Kd = 0.0
+%     C_Kn = 50   % Filter freq (hf pole)
     
     U_auto
     
@@ -108,7 +110,7 @@ end
 methods(Access=public)
     
     function this = saudefense(battle_handle, initialize)                
-        if initialize
+        if nargin == 2 && initialize
             this.update_LTI();                             
         end
         
@@ -528,6 +530,10 @@ methods(Access=public)
         end
         
         title(axe, '');
+    end
+    
+    function update_loop(this, loop)
+        this.i_loop = loop;
     end
     
     function tic(this)

@@ -1,14 +1,15 @@
 % Root abstract class for TF implementations
-% Check dtf for discrete (Z-space) impl
-% Check ctf for continuous (state vector) impl
+% Check tf_z for discrete (Z-space) impl
+% Check tf_ss for continuous (state vector) impl
 
-classdef(Abstract) i_tf < handle
+classdef i_tf < i_tf_generator
     
 properties    
     ctf     % continuous original TF
+    tf      % whatever TF it actually uses (Z, SS, S...)
     period
-end
-    
+end   
+
 methods(Access=public)
     
     function this = i_tf(ctf, period)    
@@ -16,14 +17,18 @@ methods(Access=public)
         this.period = period;
     end
     
-end    
-
-methods(Abstract)
+    function set_tf_impl(this, tf)
+        this.tf = tf;
+    end
     
-    y = output(this, x)
-        
-    reset_state(this)
-
-end
+    function tf = get_tf_impl(this)
+        tf = this.tf;
+    end
+    
+    function tf = get_tf(this)
+        tf = this.ctf;
+    end
+    
+end    
         
 end
