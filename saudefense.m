@@ -14,10 +14,7 @@ properties(Constant)
     foe_lambda = 1/4 % Incomings per second (lambda for poisson)
     % initial rate, that increases with difficulty
     
-    foe_manual_dist = 16 % Distance for a target to be considered (in manual targeting)        
-    
-    txt_armed={'disarmed', 'armed', 'cooling down', 'firing'}
-    mark_armed={'o','^', 'v', '^'}
+    foe_manual_dist = 16 % Distance for a target to be considered (in manual targeting)                
     
     difficulty_period = 5*60; % Time until max diff
 end
@@ -32,16 +29,9 @@ properties
     
     % Drawing
     fig             % world handle
-    fig_signals
-    window
     
     % Vars
-    x        = 0     % gun position
-    vx       = 0     % gun speed
-    vx_1     = 0     % previoux speed
-    ax       = 0     % gun acceleration
     Vr_man   = 0     % reference instantaneous manual input  
-    armed    = true        
     firing   = 0     % time left in current firing
     firing_len = 0.5 % time a firing lasts
     
@@ -58,6 +48,8 @@ properties
     
     foes = {}
     
+    gun
+    
     cooldown = 0
     cooldown_len = 1 % time until next shot ready
     
@@ -68,8 +60,7 @@ properties
     auto_fire = true
         
     % SAU things
-    tau     = 0.05  % 1st order gun model
-    speed   = 10    % Gun m/s (static motor gain)
+    loop % Main loop TF, externally provided
     
 %     G_Gun           % gun's TF    
 %     G_C             % controller
@@ -89,6 +80,8 @@ properties
     hist_vx = []
     hist_Vr = []
     hist_Cr = []
+    
+    nogui = false; % if this.forever is used, this will be true
 end
 
 methods(Access=private)
@@ -109,10 +102,16 @@ end
 
 methods(Access=public)
     
-    function this = saudefense(battle_handle, initialize)                
-        if nargin == 2 && initialize
-            this.update_LTI();                             
+    function this = saudefense(battle_handle, loop)                        
+        if nargin >= 2
+            this.loop = loop;
+        else
+            % Default dumb gun
+            s=tf('s');
+            this.loop = loop_single(tff.z, 2/(0.1*s+1)/s, 1);
         end
+        
+        this.gun = gun(loop);
         
         % BATTLE SETUP
         set(battle_handle, 'DefaultLineLineWidth', 2);
@@ -329,18 +328,7 @@ methods(Access=public)
             this.manual_reticle.draw(this.fig, this.foes{this.man_target}.id, ...
                 this.foes{this.man_target}.x, this.foes{this.man_target}.y, ...
                 this.scale, 'r:');
-        end
-        
-        % Gun status
-        if this.firing > 0
-            gs = 4;
-        elseif this.cooldown > 0
-            gs = 3;
-        elseif this.armed
-            gs = 2;
-        else
-            gs = 1;
-        end
+        end                
         
         %text((2-this.W/2)*this.scale, (this.H-4)*this.scale, sprintf('%d', this.hits));
         
@@ -349,19 +337,12 @@ methods(Access=public)
 %                 mean(this.load)*100, ...,                
 %                 this.txt_armed{gs}, ...
 %                 this.cooldown))
+
+        this.gun.draw(this.fig, this.scale);
         
         boxX = [-this.W/2 this.W/2 this.W/2 -this.W/2 -this.W/2]'.*this.scale;
         boxY = [0 0 this.H this.H 0]'.*this.scale;
-        plot(this.fig, boxX, boxY, 'k');
-        
-        plot(this.fig, ...
-            this.x*this.scale, 0, this.mark_armed{gs}, 'MarkerSize', foe.size*4)
-        
-        if (this.firing > 0)
-            rayX = [this.x this.x]*this.scale;
-            rayY = [0 this.H]*this.scale;
-            plot(this.fig, rayX', rayY', 'r-');
-        end        
+        plot(this.fig, boxX, boxY, 'k');                
         
         %axis([-this.W/2 this.W/2 0 this.H]*this.scale)
         drawnow
@@ -369,11 +350,22 @@ methods(Access=public)
         return
     end   
     
+    function forever(this)
+        this.nogui = true;
+        
+        done = false;
+        while ~done
+            this.tic;            
+            done    = this.iterate;            
+            this.toc;
+        end
+    end
+    
     function done = iterate(this)
         done = this.lives < 0;
         
         % Compute
-        this.compute;
+        %this.compute;
 
         % Draw
         this.draw;           
@@ -423,30 +415,30 @@ methods(Access=public)
     function update_LTI(this)
     % Update things on the fly... yikes!
     % For changes in PID parameters, T, ...
-        s=tf('s');
-        
-        %this.C_Kn = 1/this.T;
-        
-        fprintf('P=%.2f I=%.2f D=%.2f N=%.2f\n', ...
-            this.C_Kp, this.C_Ki, this.C_Kd, this.C_Kn);
-                
-        % 1st order gun
-        this.G_Gun = dtf(this.speed/(this.tau*s+1), this.T);
-
-        % Controller
-        this.G_C = dtf(this.C_Kp + this.C_Ki/s + ...
-            this.C_Kd*this.C_Kn*s/(s+this.C_Kn), this.T);
-        this.G_C.ctf
-        
-        % Integrator
-        this.G_I = dtf(1/s, this.T);   
-        
-        disp('ZEROS');
-        zero(feedback(this.G_C.ctf*this.G_Gun.ctf*this.G_I.ctf, 1))
-        disp('POLES');
-        pole(feedback(this.G_C.ctf*this.G_Gun.ctf*this.G_I.ctf, 1))
-    
-        this.hard_stop();                
+%         s=tf('s');
+%         
+%         %this.C_Kn = 1/this.T;
+%         
+%         fprintf('P=%.2f I=%.2f D=%.2f N=%.2f\n', ...
+%             this.C_Kp, this.C_Ki, this.C_Kd, this.C_Kn);
+%                 
+%         % 1st order gun
+%         this.G_Gun = dtf(this.speed/(this.tau*s+1), this.T);
+% 
+%         % Controller
+%         this.G_C = dtf(this.C_Kp + this.C_Ki/s + ...
+%             this.C_Kd*this.C_Kn*s/(s+this.C_Kn), this.T);
+%         this.G_C.ctf
+%         
+%         % Integrator
+%         this.G_I = dtf(1/s, this.T);   
+%         
+%         disp('ZEROS');
+%         zero(feedback(this.G_C.ctf*this.G_Gun.ctf*this.G_I.ctf, 1))
+%         disp('POLES');
+%         pole(feedback(this.G_C.ctf*this.G_Gun.ctf*this.G_I.ctf, 1))
+%     
+%         this.hard_stop();                
     end
     
     function update_error_plot(this, axe)

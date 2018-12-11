@@ -21,7 +21,7 @@ function sdnogui(T, C, G)
     loop = loop_single(tff, T, C*G, 1);
 
     figure(33);
-%     sau = saudefense(loop, gca);
-    %sau.update_loop(loop);
+    sau = saudefense(gca, loop);
+    sau.forever;
     
 end

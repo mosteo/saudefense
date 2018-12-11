@@ -1,4 +1,5 @@
-classdef foe < handle
+classdef foe < i_body & i_drawable & i_killable
+% TODO: split bomb & missile into different classes    
     
 properties(Constant)
     vy_max = 4;
