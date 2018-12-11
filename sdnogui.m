@@ -12,16 +12,16 @@ function sdnogui(T, C, G)
     end
     
     if nargin < 3
+        motor = motor_1st(10, 0.1);
+        G = motor.get_tf;
     end
     
-    tff = @tf_factory.z;           
+    tff = @tf_factory.z;                   
     
-    %G = motor_1st(tff, 10, 0.1);
-    
-    %loop = loop_z(C.ctf, G.ctf);
+    loop = loop_single(tff, T, C*G, 1);
 
     figure(33);
-    sau = saudefense(gca);
+%     sau = saudefense(loop, gca);
     %sau.update_loop(loop);
     
 end

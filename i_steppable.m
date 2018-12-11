@@ -1,6 +1,10 @@
-classdef i_steppable < i_tf
+% A discrete implementation of a TF, be it SS/Z/whatever based
+
+classdef i_steppable < i_tf    
     
 methods(Abstract)
+    
+    dtf = get_discrete_tf(this)
     
     y = output(this, x)
         

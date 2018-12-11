@@ -1,4 +1,4 @@
-classdef controller_pid_ideal < i_tf_generator
+classdef controller_pid_ideal < i_tf
 % An ideal PID (improper)
     
 properties

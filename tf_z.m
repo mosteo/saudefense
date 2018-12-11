@@ -1,19 +1,28 @@
 % A discretized transfer function
 %   to be used in step-by-step fashion
 
-classdef dtf < i_tf
+classdef tf_z < i_steppable
     
 properties(Access=public)
     state
-    tf
+    stf
+    dtf
 end
 
 methods(Access=public)
     
-    function this = dtf(ctf, period)
-        this@i_tf(ctf, period);
-        this.tf    = c2d(ctf, period);
-        this.state = zeros(numel(this.tf.den{1})-1, 1);
+    function this = tf_z(ctf, period)
+        this.stf   = ctf;
+        this.dtf   = c2d(ctf, period);
+        this.state = zeros(numel(this.dtf.den{1})-1, 1);
+    end
+    
+    function stf = get_tf(this)
+        stf = this.stf;
+    end
+    
+    function dtf = get_discrete_tf(this)
+        dtf = this.dtf;
     end
     
     function y = output(this, x)
