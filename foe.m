@@ -24,7 +24,8 @@ properties(Constant)
 end
 
 properties
-    x, y, vx, vy    
+    % x, y      % Those are inherited from i_body
+    vx, vy    
     
     id % unique id so change of target is easier to keep track of
         
@@ -34,17 +35,20 @@ properties
     
     spriteX
     spriteY
-        
-    game        
+    
+    T
 end
     
 methods(Access=public)
     
-    function this = foe(game, kind, difficulty)        
-        this.game = game;
+    function this = foe(period, kind, difficulty)                
+        this.T = period;
         
         if nargin < 2
             kind = mod(tic, 2) + 1;
+        end
+        if nargin < 3
+            difficulty = 0.5;
         end
         
         this.kind = kind;
@@ -54,8 +58,8 @@ methods(Access=public)
         switch kind 
             case this.BOMB
                 fprintf('Incoming bomb!\n')
-                this.x = rand*game.W-game.W/2;
-                this.y = game.H;
+                this.x = rand*saudefense.W-saudefense.W/2;
+                this.y = saudefense.H;
                 this.vy = 0;
                 this.vx = 0;
                 this.spriteX = this.bombX;
@@ -63,11 +67,11 @@ methods(Access=public)
                 
             case this.MISL
                 fprintf('Incoming missile!\n')
-                this.x = round(rand)*game.W - game.W/2;
-                this.y = rand*game.H/2*(1-difficulty*0.9) + game.H/2;                
+                this.x = round(rand)*saudefense.W - saudefense.W/2;
+                this.y = rand*saudefense.H/2*(1-difficulty*0.9) + saudefense.H/2;                
                 
                 % Go to the opposite side
-                tx  = rand*game.W/2*(-sign(this.x));
+                tx  = rand*saudefense.W/2*(-sign(this.x));
                 h   = sqrt((tx - this.x)^2 + this.y^2);
                 spd = this.missile_min_spd + rand*(this.missile_max_spd - this.missile_min_spd);
                 cs = (tx - this.x)/h;                
@@ -88,58 +92,60 @@ methods(Access=public)
         
     end
     
-    function draw(this, fig)     
-        if this.alive                        
-%             fill((this.spriteX + this.x)*this.game.scale, ...
-%                  (this.spriteY + this.y)*this.game.scale, ...
-%                   'w');
-            plot(fig, ...
-                 (this.spriteX + this.x)*this.game.scale, ...
-                 (this.spriteY + this.y)*this.game.scale, ...
-                  'k');
-        else
-            plot(fig, ...
-                 this.x*this.game.scale, ...
-                 this.y*this.game.scale, ...
-                  'xr');
-        end
-    end
-    
-    function [alive, hit, destroyed] = update(this)
-        this.x  = this.x + this.vx*this.game.T;        
-        if abs(this.x) > this.game.W/2
-            this.alive = false;
-        end        
+    function hit = check_hit(this, fx, ~, ~, real)
+        % Firing angle not used right now (vertical fire assumed)
         
-        if this.kind == this.BOMB || this.dying > 0
-            this.vy = this.vy + this.accel*this.game.T;
-        end
+        hit = this.alive && abs(this.x - fx)<=this.size/2;
         
-        this.y = this.y - this.vy*this.game.T;  
-        if this.y < 0 
-            this.y = 0;
-        end
-        
-        hit = this.alive && (this.y <= 0);
-        
-        if this.alive && this.game.firing>0 && abs(this.x - this.game.x)<=this.size/2
+        if hit && real
             fprintf('Destroyed!\n');
-            destroyed = true;
             this.alive = false;
             this.dying = this.dying_len;
             this.vy = this.vy / 2;
             this.vx = this.vx / 2;
             % fix Y offset
             this.y = this.y + this.size*1/2;
-        else
-            destroyed = false;
         end
+    end
+    
+    function draw(this, fig)     
+        if this.alive                        
+%             fill((this.spriteX + this.x)*saudefense.scale, ...
+%                  (this.spriteY + this.y)*saudefense.scale, ...
+%                   'w');
+            plot(fig, ...
+                 (this.spriteX + this.x)*saudefense.scale, ...
+                 (this.spriteY + this.y)*saudefense.scale, ...
+                  'k');
+        else
+            plot(fig, ...
+                 this.x*saudefense.scale, ...
+                 this.y*saudefense.scale, ...
+                  'xr');
+        end
+    end
+    
+    function done = update(this)
+        this.x  = this.x + this.vx*this.T;        
+        if abs(this.x) > saudefense.W/2
+            this.alive = false;
+        end        
+        
+        if this.kind == this.BOMB || this.dying > 0
+            this.vy = this.vy + this.accel*this.T;
+        end
+        
+        this.y = this.y - this.vy*this.T;  
+        if this.y < 0 
+            this.y = 0;
+        end        
         
         if this.dying > 0 
-            this.dying = this.dying - this.game.T;
+            this.dying = this.dying - this.T;
         end
         
-        alive = this.alive || this.dying>0;
+        done = ~this.alive && this.dying<=0;
+        done = done || this.y == 0;
     end
     
 end

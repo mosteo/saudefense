@@ -8,7 +8,7 @@ properties
                 % z1 is the D zero (NaN if no Kd)
                 % Z2 is the I zero (NaN if no Ki)
     
-    tf
+    stf
 
 end
     
@@ -71,7 +71,7 @@ methods
     end
     
     function tf = get_tf(this)
-        tf = this.tf;
+        tf = this.stf;
     end
 
 end
@@ -80,7 +80,7 @@ methods(Access=private)
     
     function update_tf(this)
         s = tf('s');
-        this.tf = this.Kp + this.Kd*s + this.Ki/s;
+        this.stf = this.Kp + this.Kd*s + this.Ki/s;
     end
     
 end

@@ -1,15 +1,10 @@
 classdef saudefense < handle
     
-properties(Constant)        
-    %Ts      = 2     % Motor response time
-    %OS      = 0.1   % Motor overshoot        
-    
+properties(Constant)            
     scale   = 0.1   % scale to window
     W       = 90    % world width
     H       = 160   % world height
-    Vr_max  = 5
-    v_arm   = 10  % max speed allowing fire
-    a_arm   =  2  % max accel allowing fire
+    Vr_max  = 5    
     
     foe_lambda = 1/4 % Incomings per second (lambda for poisson)
     % initial rate, that increases with difficulty
@@ -31,9 +26,7 @@ properties
     fig             % world handle
     
     % Vars
-    Vr_man   = 0     % reference instantaneous manual input  
-    firing   = 0     % time left in current firing
-    firing_len = 0.5 % time a firing lasts
+    Vr_man   = 0     % reference instantaneous manual input      
     
     target     = 0   % Current targeted foe index
     man_target = 0   % Current foe under mouse index
@@ -48,30 +41,15 @@ properties
     
     foes = {}
     
-    gun
-    
-    cooldown = 0
-    cooldown_len = 1 % time until next shot ready
+    gun         % see gun.m class
     
     numpad4  = false
     numpad6  = false
     
     auto_aim  = true
-    auto_fire = true
         
     % SAU things
-    loop % Main loop TF, externally provided
-    
-%     G_Gun           % gun's TF    
-%     G_C             % controller
-%     G_I             % sensor (integrator)   
-    
-    i_loop % loop instance, a simplified TF with position input/output
-    
-%     C_Kp = 0.1 % PID constants    
-%     C_Ki = 0.0       
-%     C_Kd = 0.0
-%     C_Kn = 50   % Filter freq (hf pole)
+    loop        % Main loop TF, see i_loop.m
     
     U_auto
     
@@ -82,6 +60,34 @@ properties
     hist_Cr = []
     
     nogui = false; % if this.forever is used, this will be true
+end
+
+methods(Static)
+    function demo(T, C, G)
+    % Function to test/demo saudefense without a GUI
+        if nargin < 1
+            T = 0.05;
+        end
+
+        if nargin < 2
+            PID = controller_pid_ideal;
+            PID.set_PID(0.4, 0, 0); 
+            C = PID.get_tf;
+        end
+
+        if nargin < 3
+            motor = motor_1st(10, 0.1);
+            G = motor.get_tf;
+        end
+
+        tff = @tf_factory.z;                   
+
+        loop = loop_single(tff, T, C*G, 1);
+
+        figure(33);
+        sau = saudefense(gca, loop);
+        sau.forever;
+    end
 end
 
 methods(Access=private)
@@ -138,7 +144,7 @@ methods(Access=public)
         
         % HISTORY
         samples = floor(this.max_hist_time / this.T);
-        this.hist_vx = [this.hist_vx; this.vx*this.T];
+        this.hist_vx = [this.hist_vx; this.gun.get_v()*this.T];
         this.hist_Vr = [this.hist_Vr; this.Vr_man];
         this.hist_Cr = [this.hist_Cr; this.U_auto];
         
@@ -149,57 +155,43 @@ methods(Access=public)
         end
     end
     
-    function dynamics(this)
+    function dynamics(this)        
         % Control input
-        E = 0;
-        if this.auto_aim && this.target > 0 && this.firing <= 0
-            Xr      = this.foes{this.target}.x;
-            E = Xr - this.x;                        
-        end       
+        if this.auto_aim && this.target > 0 && this.gun.firing <= 0
+            this.gun.set_target(this.foes{this.target});
+        else
+            this.gun.set_target([]);                        
+        end 
         
-        % Control output
-        this.U_auto = this.G_C.output(E);        
-        
-        % Mixed motor input (saturated)
-        U = this.U_auto + this.Vr_man;        
-        if abs(U) > this.Vr_max
-            U = this.Vr_max*sign(U);
-        end
-        
-        % Gun speed
-        this.vx_1 = this.vx;
-        this.vx   = this.G_Gun.output(U);
-        
-        % Gun acceleration
-        this.ax = (this.vx - this.vx_1) / this.T;
-
-        % Gun position
-        this.x = this.G_I.output(this.vx);                       
-        
-        % Collision
-        if abs(this.x) > this.W/2
-            this.x = this.W/2 * sign(this.x);
-            this.hard_stop();
-        end
-        %fprintf('%6.3f %6.3f\n', this.x, this.G_I.state);
+        this.gun.update();
     end
     
     function foeing(this)
         % Generate?
         if rand < poisspdf(1, (this.foe_lambda + this.difficulty/2)*this.T)
-            this.foes{end+1} = foe(this, 2-(rand>this.difficulty*0.9), this.difficulty);
+            this.foes{end+1} = foe(this.T, 2-(rand>this.difficulty*0.9), this.difficulty);
         end
         
         % Move 
         i = 1;        
         while i <= numel(this.foes)
-            [alive, hit, destroyed] = this.foes{i}.update();
+            done = this.foes{i}.update();
             
-            this.lives = this.lives - hit;
-            this.hits  = this.hits + destroyed;
+            % Gun hit?
+            hit_me = this.foes{i}.alive && (this.foes{i}.y <= 0);                
+            
+            % Hit by us?
+            if this.gun.firing > 0 
+                hit_it = this.foes{i}.check_hit(this.gun.x, this.gun.y, pi/2, true);
+            else
+                hit_it = false;
+            end
+            
+            this.lives = this.lives - hit_me;
+            this.hits  = this.hits  + hit_it;
             
             % adjust target if going away
-            if ~alive || destroyed
+            if done || hit_it
                 if this.target == i
                     this.target = 0;
                 elseif this.target > i
@@ -208,7 +200,7 @@ methods(Access=public)
             end
             
             % list housekeeping
-            if ~alive || hit                
+            if done || hit_it
                 this.foes(i) = [];
             else 
                 i = i + 1;
@@ -241,20 +233,8 @@ methods(Access=public)
                 if this.foes{i}.y > this.H - this.foes{i}.size; continue; end
                 % Barely visible, do not consider yet
 
-                score = norm([this.x - this.foes{i}.x; this.foes{i}.y]);
-                
-                % Old bad method (OJO!! era best mayor, ahora es menor
-%                 if this.target ~= 0 && this.foes{i}.y > this.H/2; continue; end
-%                 % Too high to merit switch            
-% 
-%                 score = this.W/abs(this.foes{i}.x - this.x + 1)*0.25; 
-%                 % The closer the better
-% 
-%                 % But the lower the better
-%                 if this.foes{i}.y <= this.H/2
-%                     score = score + this.H/2/(this.foes{i}.y + 1); % The lower the better
-%                 end
-% 
+                score = norm([this.gun.x - this.foes{i}.x; this.foes{i}.y]);
+
                 if score < best
                     best = score;
                     this.target = i;
@@ -264,44 +244,14 @@ methods(Access=public)
     end
     
     function fire(this)
-        % Cooldown
-        if this.cooldown > 0
-            this.cooldown = this.cooldown - this.T;
-            if this.cooldown < 0 
-                this.cooldown = 0;
-            end
-        end
-        
-        % Firing
-        if this.firing > 0
-            this.firing = this.firing - this.T;
-            
-            if abs(this.ax) > this.a_arm || abs(this.vx) > this.v_arm
-                % Abort firing and start cooldown
-                this.firing = -1;
-            end
-                
-            if this.firing < 0 
-                this.cooldown = this.cooldown_len;
-            end
-        end        
-        
-        % Arming
-        this.armed = this.firing<=0 && this.cooldown<=0 && ...
-            abs(this.ax)<=this.a_arm && abs(this.vx)<=this.v_arm;
-        
-        % Autofire (once armed is computed)
-        if this.auto_fire && this.armed && this.target > 0 && ...
-                abs(this.x - this.foes{this.target}.x) <= this.foes{this.target}.size/2
-            this.firing = this.firing_len;
-            this.armed  = false;
-        end 
+        this.gun.fire;
     end
     
     function draw(this)   
         % WORLD
         cla(this.fig)
         axes(this.fig)
+        axis equal
         fill(this.fig, ...
             [-this.W/2; this.W/2; this.W/2; -this.W/2]*this.scale, ...
             [0; 0; this.H; this.H], 'w');
@@ -330,13 +280,15 @@ methods(Access=public)
                 this.scale, 'r:');
         end                
         
-        %text((2-this.W/2)*this.scale, (this.H-4)*this.scale, sprintf('%d', this.hits));
-        
-%         text(-this.W/2*this.scale, -16*this.scale, ...
-%             sprintf('CPU: %5.1f%%\nGun: %s\nCooldown: %3.1f', ...
-%                 mean(this.load)*100, ...,                
-%                 this.txt_armed{gs}, ...
-%                 this.cooldown))
+        if this.nogui
+            text((2-this.W/2)*this.scale, (this.H-4)*this.scale, sprintf('%d', this.hits));
+
+            text(-this.W/2*this.scale, -16*this.scale, ...
+                sprintf('CPU: %5.1f%%\nGun: %s\nCooldown: %3.1f', ...
+                    mean(this.load)*100, ...,                
+                    this.gun.get_ready_txt(), ...
+                    this.gun.cooldown))
+        end
 
         this.gun.draw(this.fig, this.scale);
         
@@ -365,7 +317,7 @@ methods(Access=public)
         done = this.lives < 0;
         
         % Compute
-        %this.compute;
+        this.compute;
 
         % Draw
         this.draw;           
@@ -406,13 +358,10 @@ methods(Access=public)
     
     function hard_stop(this)
     % When stopping abruptly or reconfiguring
-        this.G_C.reset_state();
-        this.G_Gun.reset_state();
-        % integrator stated fixed to next value
-        this.G_I.set_state(this.x);
+        this.gun.hard_stop();
     end
     
-    function update_LTI(this)
+    function update_LTI(~)
     % Update things on the fly... yikes!
     % For changes in PID parameters, T, ...
 %         s=tf('s');

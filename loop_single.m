@@ -11,24 +11,26 @@ methods(Static)
     
         this.stf = feedback(G, H);
         this.dtf = tff(this.stf, T);
+        
+        this.period = T;
     
     end
 end
     
 methods
     
-    function y = output(this, x)
-        y = 0;
+    function y = output(this, x)        
+        y = this.dtf.output(x);
     end            
     
     function v = get_v(this)
     % the velocity output after last call to output (position)
-        v = 0;
+        v = this.dtf.get_v();
     end
     
     function a = get_a(this)
     % The acceleration output
-        a = 0;
+        a = this.dtf.get_a();
     end
     
     function stf = get_tf(this)
@@ -40,6 +42,7 @@ methods
     end
     
     function reset_state(this)
+        this.dtf.reset_state();
     end
     
 end
