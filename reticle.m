@@ -35,6 +35,7 @@ methods
                 this.h_reticle.XData= (x+reticle.X)'*scale;
                 this.h_reticle.YData= (y+reticle.Y)'*scale;
             end
+            uistack(this.h_reticle,'top'); % Over foes
         else
             if ~isempty(this.h_reticle)
                 set(this.h_reticle,'Visible','off')

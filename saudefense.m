@@ -122,17 +122,8 @@ methods(Access=public)
             s=tf('s');
             this.loop = loop_single(tff.z, 2/(0.1*s+1)/s, 1);
         end
-        this.target_reticle=reticle()
-        this.gun = gun(loop);
-        
-        % BATTLE SETUP
-        set(battle_handle, 'DefaultLineLineWidth', 2);
-        axes(battle_handle);
-        axis off
-        hold on
-        cla(battle_handle);
-        axis(battle_handle, [-this.W/2 this.W/2 0 this.H]*this.scale)        
-%        drawnow
+        this.target_reticle=reticle();
+        this.gun = gun(loop);        
         this.fig = battle_handle;
     end
     
@@ -258,8 +249,14 @@ methods(Access=public)
         %cla(this.fig)
 
         if isempty(this.init_done)
-            axes(this.fig)
+            % 1st initialization
+            axes(this.fig)            
+            set(this.fig, 'DefaultLineLineWidth', 2);
+            axis off            
+            hold on
+            cla(this.fig);
             axis equal
+            axis(this.fig, [-this.W/2 this.W/2 0 this.H]*this.scale)        
             fill(this.fig, ...
                 [-this.W/2; this.W/2; this.W/2; -this.W/2]*this.scale, ...
                 [0; 0; this.H; this.H], 'w');
@@ -315,7 +312,7 @@ methods(Access=public)
                     sprintf('CPU: %5.1f%%\nGun: %s\nCooldown: %3.1f', ...
                         mean(this.load)*100, ...,                
                         this.gun.get_ready_txt(), ...
-                        this.gun.cooldown))
+                        this.gun.cooldown));
             else
                 this.h_text_2.String=char(sprintf('CPU: %5.1f%%\nGun: %s\nCooldown: %3.1f', ...
                         mean(this.load)*100, ...,                
