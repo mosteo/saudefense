@@ -288,12 +288,13 @@ methods(Access=public)
         end
         
         % Reticle
+        red = [1 0 0];
         if this.target > 0 
             this.target_reticle.draw(this.fig, this.foes{this.target}.id, ...
                 this.foes{this.target}.x, this.foes{this.target}.y, ...
-                this.scale, 'r');
+                this.scale, red);
         else
-            this.target_reticle.draw(this.fig, 0, 0, 0, this.scale, 'r');
+            this.target_reticle.draw(this.fig, 0, 0, 0, this.scale, red);
         end
 %         if this.man_target > 0 
 %             this.manual_reticle.draw(this.fig, this.foes{this.man_target}.id, ...
@@ -313,7 +314,6 @@ methods(Access=public)
         end
 
         this.gun.draw(this.fig, this.scale);                          
-%        drawnow
         
         return
     end   

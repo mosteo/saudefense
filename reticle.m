@@ -8,14 +8,10 @@ end
 properties
     id    = 0  % last target id to detect changes    
     flash = 0  % counter to flash the reticle on target change
-    h_reticle=[];
+    h     = drawer;
 end
     
-methods
-    
-    function this=reticle()
-            this.h_reticle=[];
-    end
+methods    
     
     function draw(this, fig, id, x, y, scale, color)
         if id ~= this.id
@@ -26,20 +22,13 @@ methods
         should_draw = mod(this.flash, 2) == 0 && id ~=0;
         this.flash = max(0, this.flash - 1);
             
-        if should_draw            
-            if isempty(this.h_reticle)
-                this.h_reticle = plot(fig, (x+reticle.X)'*scale, (y+reticle.Y)'*scale, ...
-                    color, 'LineWidth', 1);
-            else
-                set(this.h_reticle,'Visible','on')
-                this.h_reticle.XData= (x+reticle.X)'*scale;
-                this.h_reticle.YData= (y+reticle.Y)'*scale;
-            end
-            uistack(this.h_reticle,'top'); % Over foes
+        if should_draw          
+            this.h.plot(fig, (x+reticle.X)'*scale, (y+reticle.Y)'*scale, ...
+                'Color', color, 'LineWidth', 1);
+            this.h.show;
+            this.h.bring_to_front;
         else
-            if ~isempty(this.h_reticle)
-                set(this.h_reticle,'Visible','off')
-            end
+            this.h.show(false);
         end
     end    
 end
