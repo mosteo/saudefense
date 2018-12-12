@@ -61,8 +61,9 @@ properties
     
     nogui = false; % if this.forever is used, this will be true
     
-    h_text_1;
-    h_text_2;
+    txt_score  = drawer();
+    txt_status = drawer();
+    
     h_lives={};
     
     init_done;
@@ -301,24 +302,14 @@ methods(Access=public)
 %         end                
         
         if this.nogui
-            if isempty(this.h_text_1)
-                this.h_text_1 = text((2-this.W/2)*this.scale, (this.H-4)*this.scale, sprintf('%d', this.hits));
-            else
-                this.h_text_1.String=char(sprintf('%d', this.hits));
-            end
+            this.txt_score.text(this.fig, (2-this.W/2)*this.scale, (this.H-4)*this.scale, ...
+                sprintf('%d', this.hits));
             
-            if isempty(this.h_text_2)
-                this.h_text_2 = text(-this.W/2*this.scale, -16*this.scale, ...
-                    sprintf('CPU: %5.1f%%\nGun: %s\nCooldown: %3.1f', ...
+            this.txt_status.text(this.fig, -this.W/2*this.scale, -16*this.scale, ...
+                sprintf('CPU: %5.1f%%\nGun: %s\nCooldown: %3.1f', ...
                         mean(this.load)*100, ...,                
                         this.gun.get_ready_txt(), ...
                         this.gun.cooldown));
-            else
-                this.h_text_2.String=char(sprintf('CPU: %5.1f%%\nGun: %s\nCooldown: %3.1f', ...
-                        mean(this.load)*100, ...,                
-                        this.gun.get_ready_txt(), ...
-                        this.gun.cooldown));
-            end
         end
 
         this.gun.draw(this.fig, this.scale);                          
