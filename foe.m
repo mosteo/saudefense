@@ -37,6 +37,9 @@ properties
     spriteY
     
     T
+    
+    h_foe;
+    h_fill;
 end
     
 methods(Access=public)
@@ -110,18 +113,28 @@ methods(Access=public)
     
     function draw(this, fig)     
         if this.alive                        
-%             fill((this.spriteX + this.x)*saudefense.scale, ...
-%                  (this.spriteY + this.y)*saudefense.scale, ...
-%                   'w');
-            plot(fig, ...
-                 (this.spriteX + this.x)*saudefense.scale, ...
-                 (this.spriteY + this.y)*saudefense.scale, ...
-                  'k');
+            if isempty(this.h_foe)
+
+                this.h_fill = fill((this.spriteX + this.x)*saudefense.scale, ...
+                  (this.spriteY + this.y)*saudefense.scale, ...
+                  'w');
+                
+                this.h_foe = plot(fig, ...
+                     (this.spriteX + this.x)*saudefense.scale, ...
+                     (this.spriteY + this.y)*saudefense.scale, ...
+                      'k');
+            else
+                this.h_foe.XData = (this.spriteX + this.x)*saudefense.scale;
+                this.h_foe.YData = (this.spriteY + this.y)*saudefense.scale;
+                this.h_fill.XData = (this.spriteX + this.x)*saudefense.scale;
+                this.h_fill.YData = (this.spriteY + this.y)*saudefense.scale;
+            end
         else
-            plot(fig, ...
-                 this.x*saudefense.scale, ...
-                 this.y*saudefense.scale, ...
-                  'xr');
+            this.h_foe.XData = this.x*saudefense.scale;
+            this.h_foe.YData = this.y*saudefense.scale;
+            this.h_foe.Marker = 'x';
+            this.h_foe.Color = [1 0 0];
+            set(this.h_fill,'Visible','off');
         end
     end
     
@@ -146,6 +159,16 @@ methods(Access=public)
         
         done = ~this.alive && this.dying<=0;
         done = done || this.y == 0;
+        
+        if done && (~isempty(this.h_foe)) && isvalid(this.h_foe)
+            delete(this.h_foe);
+            this.h_foe=[];
+        end
+        
+        if done && (~isempty(this.h_fill)) && isvalid(this.h_fill)
+            delete(this.h_fill);
+            this.h_fill=[];
+        end
     end
     
 end

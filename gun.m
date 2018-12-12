@@ -26,6 +26,9 @@ properties
     gun_ready = 2;   % (disarmed, armed, cooling, firing) (positive)
     
     target   = []    % An instance of i_killable
+    
+    h_gun;
+    h_ray;
 end
     
 methods
@@ -52,13 +55,29 @@ methods
         
         this.gun_ready = gs;
         
-        plot(axis, ...
-            this.x*scale, 0, this.mark_armed{gs}, 'MarkerSize', this.size)
+        if isempty(this.h_gun)
+            this.h_gun=plot(axis, ...
+                this.x*scale, 0, this.mark_armed{gs}, 'MarkerSize', this.size)
+        else
+            this.h_gun.XData = this.x*scale;
+            this.h_gun.Marker = this.mark_armed{gs};
+        end
+        
         
         if (this.firing > 0)
             rayX = [this.x this.x]*scale;
             rayY = [0 saudefense.H]*scale;
-            plot(axis, rayX', rayY', 'r-');
+            if isempty(this.h_ray)
+                this.h_ray=plot(axis, rayX', rayY', 'r-');
+            else
+                this.h_ray.XData = rayX';
+                this.h_ray.YData = rayY';
+            end
+        else
+            if (~isempty(this.h_ray)) && isvalid(this.h_ray)
+                delete(this.h_ray);
+                this.h_ray = [];
+            end
         end        
     end
     

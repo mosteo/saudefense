@@ -31,8 +31,8 @@ properties
     target     = 0   % Current targeted foe index
     man_target = 0   % Current foe under mouse index
     
-    target_reticle = reticle()
-    manual_reticle = reticle()
+    target_reticle
+%    manual_reticle = reticle()
     
     difficulty = 0;
     
@@ -60,6 +60,12 @@ properties
     hist_Cr = []
     
     nogui = false; % if this.forever is used, this will be true
+    
+    h_text_1;
+    h_text_2;
+    h_lives={};
+    
+    init_done;
 end
 
 methods(Static)
@@ -116,7 +122,7 @@ methods(Access=public)
             s=tf('s');
             this.loop = loop_single(tff.z, 2/(0.1*s+1)/s, 1);
         end
-        
+        this.target_reticle=reticle()
         this.gun = gun(loop);
         
         % BATTLE SETUP
@@ -126,7 +132,7 @@ methods(Access=public)
         hold on
         cla(battle_handle);
         axis(battle_handle, [-this.W/2 this.W/2 0 this.H]*this.scale)        
-        drawnow
+%        drawnow
         this.fig = battle_handle;
     end
     
@@ -200,7 +206,7 @@ methods(Access=public)
             end
             
             % list housekeeping
-            if done || hit_it
+            if done
                 this.foes(i) = [];
             else 
                 i = i + 1;
@@ -249,18 +255,33 @@ methods(Access=public)
     
     function draw(this)   
         % WORLD
-        cla(this.fig)
-        axes(this.fig)
-        axis equal
-        fill(this.fig, ...
-            [-this.W/2; this.W/2; this.W/2; -this.W/2]*this.scale, ...
-            [0; 0; this.H; this.H], 'w');
+        %cla(this.fig)
+
+        if isempty(this.init_done)
+            axes(this.fig)
+            axis equal
+            fill(this.fig, ...
+                [-this.W/2; this.W/2; this.W/2; -this.W/2]*this.scale, ...
+                [0; 0; this.H; this.H], 'w');
+                    boxX = [-this.W/2 this.W/2 this.W/2 -this.W/2 -this.W/2]'.*this.scale;
+                boxY = [0 0 this.H this.H 0]'.*this.scale;
+                plot(this.fig, boxX, boxY, 'k');       
+                this.init_done = 1;
+        end
         
         % lives
-        for i=1:this.lives
-            plot(this.fig, ...
-            [-this.W/2 this.W/2]'*this.scale, ...
-             ones(2,1)*i*2*this.scale, 'g');
+        if (isempty(this.h_lives))
+            for i=1:this.lives
+                this.h_lives{i}=plot(this.fig, ...
+                [-this.W/2 this.W/2]'*this.scale, ...
+                 ones(2,1)*i*2*this.scale, 'g');
+            end
+        else
+            for i=(this.lives+1):length(this.h_lives)
+                if i>0 && i<= length(this.h_lives)
+                    set(this.h_lives{i},'Visible','off');
+                end
+            end
         end
         
         % Foes
@@ -273,31 +294,38 @@ methods(Access=public)
             this.target_reticle.draw(this.fig, this.foes{this.target}.id, ...
                 this.foes{this.target}.x, this.foes{this.target}.y, ...
                 this.scale, 'r');
+        else
+            this.target_reticle.draw(this.fig, 0, 0, 0, this.scale, 'r');
         end
-        if this.man_target > 0 
-            this.manual_reticle.draw(this.fig, this.foes{this.man_target}.id, ...
-                this.foes{this.man_target}.x, this.foes{this.man_target}.y, ...
-                this.scale, 'r:');
-        end                
+%         if this.man_target > 0 
+%             this.manual_reticle.draw(this.fig, this.foes{this.man_target}.id, ...
+%                 this.foes{this.man_target}.x, this.foes{this.man_target}.y, ...
+%                 this.scale, 'r:');
+%         end                
         
         if this.nogui
-            text((2-this.W/2)*this.scale, (this.H-4)*this.scale, sprintf('%d', this.hits));
-
-            text(-this.W/2*this.scale, -16*this.scale, ...
-                sprintf('CPU: %5.1f%%\nGun: %s\nCooldown: %3.1f', ...
-                    mean(this.load)*100, ...,                
-                    this.gun.get_ready_txt(), ...
-                    this.gun.cooldown))
+            if isempty(this.h_text_1)
+                this.h_text_1 = text((2-this.W/2)*this.scale, (this.H-4)*this.scale, sprintf('%d', this.hits));
+            else
+                this.h_text_1.String=char(sprintf('%d', this.hits));
+            end
+            
+            if isempty(this.h_text_2)
+                this.h_text_2 = text(-this.W/2*this.scale, -16*this.scale, ...
+                    sprintf('CPU: %5.1f%%\nGun: %s\nCooldown: %3.1f', ...
+                        mean(this.load)*100, ...,                
+                        this.gun.get_ready_txt(), ...
+                        this.gun.cooldown))
+            else
+                this.h_text_2.String=char(sprintf('CPU: %5.1f%%\nGun: %s\nCooldown: %3.1f', ...
+                        mean(this.load)*100, ...,                
+                        this.gun.get_ready_txt(), ...
+                        this.gun.cooldown));
+            end
         end
 
-        this.gun.draw(this.fig, this.scale);
-        
-        boxX = [-this.W/2 this.W/2 this.W/2 -this.W/2 -this.W/2]'.*this.scale;
-        boxY = [0 0 this.H this.H 0]'.*this.scale;
-        plot(this.fig, boxX, boxY, 'k');                
-        
-        %axis([-this.W/2 this.W/2 0 this.H]*this.scale)
-        drawnow
+        this.gun.draw(this.fig, this.scale);                          
+%        drawnow
         
         return
     end   
@@ -308,8 +336,9 @@ methods(Access=public)
         done = false;
         while ~done
             this.tic;            
-            done    = this.iterate;            
-            this.toc;
+            done    = this.iterate;                       
+            pause(this.T - this.toc);
+%             this.toc;
         end
     end
     
@@ -481,10 +510,10 @@ methods(Access=public)
         this.start = tic;
     end
     
-    function toc(this)
+    function elapsed = toc(this)
         % Load
         elapsed = toc(this.start);                        
-        this.load = [this.load elapsed / this.T];
+        this.load = [this.load elapsed/this.T];
         if numel(this.load) > this.load_len
             this.load = this.load(2:end);
         end    
