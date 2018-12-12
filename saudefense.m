@@ -200,7 +200,7 @@ methods(Access=public)
             end
             
             % list housekeeping
-            if done || hit_it
+            if done
                 this.foes(i) = [];
             else 
                 i = i + 1;
