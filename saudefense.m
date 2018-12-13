@@ -58,7 +58,7 @@ properties
     hist_r = []
     hist_y = []
     plot_hist = true;
-    hist_frac = 0.2 % Fraction reserved for history at bottom
+    hist_frac = 0.25 % Fraction reserved for history at bottom
     
     nogui = false; % if this.forever is used, this will be true
     
@@ -304,11 +304,7 @@ methods(Access=public)
         cla(this.fig);
         axis(this.fig, 'equal');
         
-        if this.plot_hist
-             axis(this.fig, [-this.W/2 this.W/2 -this.H*this.hist_frac this.H]*this.scale)        
-        else
-            axis(this.fig, [-this.W/2 this.W/2 0 this.H]*this.scale)        
-        end
+        this.draw_fix_axis();
         
         fill(this.fig, ...
             [-this.W/2; this.W/2; this.W/2; -this.W/2]*this.scale, ...
@@ -316,6 +312,14 @@ methods(Access=public)
         boxX = [-this.W/2 this.W/2 this.W/2 -this.W/2 -this.W/2]'.*this.scale;
         boxY = [0 0 this.H this.H 0]'.*this.scale;
         this.frame.plot(this.fig, boxX, boxY, 'Color', [0, 0, 0]);       
+    end
+    
+    function draw_fix_axis(this)
+        if this.plot_hist
+             axis(this.fig, [-this.W/2 this.W/2 -this.H*this.hist_frac this.H]*this.scale)        
+        else
+            axis(this.fig, [-this.W/2 this.W/2 0 this.H]*this.scale)        
+        end
     end
     
     function draw(this)                  
@@ -367,11 +371,11 @@ methods(Access=public)
         if this.plot_hist && numel(this.hist_r)>1
             y=(-numel(this.hist_r)+1:0)/ ...
                 (this.max_hist_time/this.T)*... % normalized to 1
-                this.hist_frac*this.H*this.scale;
-            this.h_r.plot(this.fig, this.hist_r*this.scale, y', ...
-                'LineWidth', 1, 'Color', [1 0 0]);
+                this.hist_frac*this.H*this.scale;            
             this.h_y.plot(this.fig, this.hist_y*this.scale, y', ...
                 'LineWidth', 1, 'Color', [0 0 0.7]);
+            this.h_r.plot(this.fig, this.hist_r*this.scale, y', ...
+                'LineWidth', 1, 'Color', [1 0 0]);
         end
         
         this.frame.bring_to_front;

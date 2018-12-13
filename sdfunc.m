@@ -20,8 +20,11 @@ methods(Static)
         
         handles.sau = saudefense(handles.battle, ...
             loop_single(handles.props.tff, 0.05, C*G, 1));
+
         sau = handles.sau;
 
+        sau.plot_hist = handles.do_siso.Value;
+        
         handles.difficulty.Value = sau.difficulty;
         sdfunc.update_difficulty_panel(handles);
 
@@ -35,8 +38,8 @@ methods(Static)
         handles.start.Enable = 'on';
         handles.initializing.Visible = 'off';
         
-        hold(handles.siso, 'on');
-        axis(handles.siso, [-sau.max_hist_time 0 -sau.W/2, sau.W/2]);
+%         hold(handles.siso, 'on');
+%         axis(handles.siso, [-sau.max_hist_time 0 -sau.W/2, sau.W/2]);
         
         h = handles;
         disp('Ready');
@@ -47,9 +50,9 @@ methods(Static)
         h.sau.tic()
         h.sau.iterate();
 
-        if h.do_siso.Value
-            sdfunc.update_siso_plot(h);
-        end
+%         if h.do_siso.Value
+%             sdfunc.update_siso_plot(h);
+%         end
 
         sdfunc.update_difficulty_panel(h);
         sdfunc.update_texts(h, h.sau);    
