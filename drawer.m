@@ -8,9 +8,28 @@ end
 
 methods   
     
+    function delete(this) % DESTRUCTOR
+        if ~isempty(this.h)
+            delete(this.h);
+        end
+    end
+    
     function bring_to_front(this)
         if ~isempty(this.h)
             uistack(this.h, 'top');
+        end
+    end
+    
+    function fill(this, ax, x, y, color, varargin)
+        return
+        axes(ax);
+        if isempty(this.h)
+            this.h = fill(x, y, color, varargin{:});
+        else
+            this.h.Vertices(:,1) = x;
+            this.h.Vertices(:,2) = y;
+            this.h.FaceColor = color;
+            this.update(varargin{:});
         end
     end
     

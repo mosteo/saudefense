@@ -46,6 +46,9 @@ methods(Static)
         handles.start.Enable = 'on';
         handles.initializing.Visible = 'off';
         
+        hold(handles.siso, 'on');
+        axis(handles.siso, [-sau.max_hist_time 0 -sau.W/2, sau.W/2]);
+        
         h = handles;
         disp('Ready');
     end
@@ -69,13 +72,15 @@ methods(Static)
             handles.sau.tic()
             handles.sau.iterate();
 
-            if handles.siso_enabled.Value
-                handles.sau.update_siso_plot(handles.siso);
+            if handles.do_siso.Value
+                sdfunc.update_siso_plot(handles);
             end
             
             sdfunc.update_texts(handles, handles.sau);    
             
-            handles.sau.toc()
+%             drawnow
+            
+            handles.sau.toc();
         end
     end        
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -166,24 +171,21 @@ methods(Static)
         drawnow
     end
     
-    function update_siso_plot(this, axe)
-        axes(axe);
-        cla(axe);
-        hold(axe, 'on');
+    function update_siso_plot(handles)               
+        sau   = handles.sau;
+        axe   = handles.siso;
         
-        if numel(this.hist_vx) > 1
-            X=(-numel(this.hist_vx)+1:0)' * this.T;
-            plot(axe, ...
-                 X, this.hist_vx/this.speed, ...
-                 X, this.hist_Vr/this.Vr_max, ...
-                 X, this.hist_Cr/this.Vr_max);
-            axis([-this.max_hist_time 0 -1.05 1.05])
+        if numel(sau.hist_r) > 1
+            X=(-numel(sau.hist_r)+1:0)' * sau.T;
+            handles.props.h_r.plot(axe, X, sau.hist_r, 'Color', [1 0 0]);
+            handles.props.h_y.plot(axe, X, sau.hist_y, 'Color', [0 0 1]);                 
+%             axis(axe, [-sau.max_hist_time 0 -1.05 1.05])
         end
         
-        title(axe, '');
-        xlabel(axe, '');
-        ylabel(axe, '');
-        drawnow
+%         title(axe, '');
+%         xlabel(axe, '');
+%         ylabel(axe, '');
+        % drawnow
     end    
     
     function update_rlocus(axe, C, G)

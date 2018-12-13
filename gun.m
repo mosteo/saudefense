@@ -64,7 +64,7 @@ methods
         
         this.h_gun.plot(axis, ...
             this.x*scale, 0, 'Marker', this.mark_armed{gs}, ...
-            'MarkerSize', this.size, 'Color', [0 0 0.5]);
+            'MarkerSize', this.size, 'Color', [0 0 0.7]);
         
         
         if (this.firing > 0)

@@ -12,10 +12,15 @@ properties(Access=public)
     diff_changed = false % Difficulty was manually changed and must be updated
     difficulty   = 0.0   % New diff to set
     
+    h_r
+    h_y  % Drawers for history
+    
 end
 
 methods(Static)
     function this = props
+        this.h_r = drawer();
+        this.h_y = drawer();
     end
 end
 

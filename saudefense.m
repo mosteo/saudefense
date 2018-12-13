@@ -55,9 +55,8 @@ properties
     
     % History
     max_hist_time = 10 % Seconds of history to keep
-    hist_vx = []
-    hist_Vr = []
-    hist_Cr = []
+    hist_r = []
+    hist_y = []
     
     nogui = false; % if this.forever is used, this will be true
     
@@ -114,7 +113,7 @@ methods(Static)
             G = 30 * motor.get_tf;
         end
 
-        tff = @tf_factory.ss;   
+        tff = @tf_factory.z;   
 
         loop = loop_single(tff, T, C*G, 1);
 
@@ -180,14 +179,19 @@ methods(Access=public)
         
         % HISTORY
         samples = floor(this.max_hist_time / this.T);
-        this.hist_vx = [this.hist_vx; this.gun.get_v()*this.T];
-        this.hist_Vr = [this.hist_Vr; this.Vr_man];
-        this.hist_Cr = [this.hist_Cr; this.U_auto];
         
-        if numel(this.hist_vx) > samples
-            this.hist_vx = this.hist_vx(2:end);
-            this.hist_Vr = this.hist_Vr(2:end);
-            this.hist_Cr = this.hist_Cr(2:end);
+        if this.target > 0 
+            r = this.foes{this.target}.x;
+        else
+            r = nan;
+        end
+        
+        this.hist_r = [this.hist_r; r];
+        this.hist_y = [this.hist_y; this.gun.x];
+        
+        if numel(this.hist_r) > samples
+            this.hist_r = this.hist_r(2:end);
+            this.hist_y = this.hist_y(2:end);
         end
     end
     
@@ -308,10 +312,8 @@ methods(Access=public)
              this.h_lives{i}.show();
         end
 
-        for i=(this.lives+1):numel(this.h_lives)
-            if i>0 && i<= length(this.h_lives)
-                this.h_lives{i}.show(false);
-            end
+        for i=(max(this.lives,0)+1):numel(this.h_lives)            
+            this.h_lives{i}.show(false);            
         end
         
         % Foes
@@ -349,6 +351,7 @@ methods(Access=public)
         
         this.frame.bring_to_front;
         
+%         drawnow
         return
     end   
     
@@ -416,7 +419,10 @@ methods(Access=public)
     % Update things on the fly... yikes!
     % For changes in PID parameters, T, ...
     % Receives ideal s-tf Controller and Plant
-        this.loop = loop_single(@tf_factory.ss, this.T, C*G, 1);          
+    C
+    G
+        this.loop = loop_single(@tf_factory.ss, this.T, C*G, 1); 
+        this.gun.loop = this.loop;
     end        
     
     function tic(this)

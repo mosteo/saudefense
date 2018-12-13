@@ -38,7 +38,7 @@ properties
     
     T
     
-    h_foe;
+    h_foe;  % Drawers
     h_fill;
 end
     
@@ -57,6 +57,9 @@ methods(Access=public)
         this.kind = kind;
         
         this.id = rand;
+        
+        this.h_foe  = drawer();
+        this.h_fill = drawer();
         
         switch kind 
             case this.BOMB
@@ -112,29 +115,20 @@ methods(Access=public)
     end
     
     function draw(this, fig)     
-        if this.alive                        
-            if isempty(this.h_foe)
-
-                this.h_fill = fill((this.spriteX + this.x)*saudefense.scale, ...
+        if this.alive     
+            this.h_fill.fill(fig, (this.spriteX + this.x)*saudefense.scale, ...
                   (this.spriteY + this.y)*saudefense.scale, ...
                   'w');
                 
-                this.h_foe = plot(fig, ...
+                this.h_foe.plot(fig, ...
                      (this.spriteX + this.x)*saudefense.scale, ...
                      (this.spriteY + this.y)*saudefense.scale, ...
-                      'k');
-            else
-                this.h_foe.XData = (this.spriteX + this.x)*saudefense.scale;
-                this.h_foe.YData = (this.spriteY + this.y)*saudefense.scale;
-                this.h_fill.XData = (this.spriteX + this.x)*saudefense.scale;
-                this.h_fill.YData = (this.spriteY + this.y)*saudefense.scale;
-            end
+                      'Color', [0 0 0]);            
+            this.h_fill.show;
         else
-            this.h_foe.XData = this.x*saudefense.scale;
-            this.h_foe.YData = this.y*saudefense.scale;
-            this.h_foe.Marker = 'x';
-            this.h_foe.Color = [1 0 0];
-            set(this.h_fill,'Visible','off');
+            this.h_fill.show(false);
+            this.h_foe.plot(fig, this.x*saudefense.scale, this.y*saudefense.scale, ...
+                'Marker', 'x', 'Color', [1 0 0]);
         end
     end
     
@@ -159,16 +153,6 @@ methods(Access=public)
         
         done = ~this.alive && this.dying<=0;
         done = done || this.y == 0;
-        
-        if done && (~isempty(this.h_foe)) && isvalid(this.h_foe)
-            delete(this.h_foe);
-            this.h_foe=[];
-        end
-        
-        if done && (~isempty(this.h_fill)) && isvalid(this.h_fill)
-            delete(this.h_fill);
-            this.h_fill=[];
-        end
     end
     
 end
