@@ -20,7 +20,7 @@ methods(Access=public)
         this.period= period;
         this.stf   = ctf;
         [A,B,C,D]  = tf2ss(cell2mat(ctf.Numerator), cell2mat(ctf.Denominator));
-        this.sstf = ss(A,B,C,D); 
+        this.sstf  = ss(A,B,C,D); 
         this.state = zeros(size(A,1), 1);
     end
     
@@ -36,7 +36,7 @@ methods(Access=public)
         x_1 = this.x;
         v_1 = this.v;
         
-        [Y,T,X]=lsim(this.sstf,x*[1 0],0:this.period:this.period,this.state);
+        [Y,~,X]=lsim(this.sstf,x*[1 0],0:this.period:this.period,this.state);
         this.state = X(end,:);
         y = Y(end);
         

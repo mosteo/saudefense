@@ -3,11 +3,9 @@
 
 classdef(Abstract) i_loop < i_steppable
     
-methods(Abstract)
-    
-    %  Nothing here for now... moved to i_steppable
-    %  Kept just in case
-    
+properties(Abstract)
+    G   % Forward path TF
+    H   % Feedback path TF
 end
     
 end

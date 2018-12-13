@@ -12,6 +12,7 @@ properties(Constant)
     foe_manual_dist = 16 % Distance for a target to be considered (in manual targeting)                
     
     difficulty_period = 5*60; % Time until max diff
+    initial_lives     = 3;
 end
 
 properties        
@@ -32,12 +33,11 @@ properties
     man_target = 0   % Current foe under mouse index
     
     target_reticle
-%    manual_reticle = reticle()
     
     difficulty = 0;
     
     hits  = 0 % Foes destroyed   
-    lives = 3;    
+    lives = saudefense.initial_lives;    
     
     foes = {}
     
@@ -61,12 +61,11 @@ properties
     
     nogui = false; % if this.forever is used, this will be true
     
-    txt_score  = drawer();
-    txt_status = drawer();
+    txt_score   % Drawers
+    txt_status
+    frame      
     
-    h_lives={};
-    
-    init_done;
+    h_lives = cell(saudefense.initial_lives, 1);
 end
 
 methods(Static)
@@ -88,7 +87,7 @@ methods(Static)
             G = motor.get_tf;
         end
 
-        tff = @tf_factory.z;
+        tff = @tf_factory.ss;
 
         loop = loop_single(tff, T, C*G, 1);
 
@@ -144,7 +143,7 @@ end
 
 methods(Access=public)
     
-    function this = saudefense(battle_handle, loop)                        
+    function this = saudefense(battle_handle, loop)                     
         if nargin >= 2
             this.loop = loop;
         else
@@ -152,9 +151,19 @@ methods(Access=public)
             s=tf('s');
             this.loop = loop_single(tff.z, 2/(0.1*s+1)/s, 1);
         end
+        
+        this.txt_score  = drawer();
+        this.txt_status = drawer();
+        this.frame      = drawer();
         this.target_reticle=reticle();
         this.gun = gun(loop);        
         this.fig = battle_handle;
+        
+        for i=1:numel(this.h_lives)
+            this.h_lives{i} = drawer();
+        end
+        
+        this.draw_init();
     end
     
     function compute(this)
@@ -274,40 +283,34 @@ methods(Access=public)
         this.gun.fire;
     end
     
-    function draw(this)   
-        % WORLD
-        %cla(this.fig)
-
-        if isempty(this.init_done)
-            % 1st initialization
-            axes(this.fig)            
-            set(this.fig, 'DefaultLineLineWidth', 2);
-            axis off            
-            hold on
-            cla(this.fig);
-            axis equal
-            axis(this.fig, [-this.W/2 this.W/2 0 this.H]*this.scale)        
-            fill(this.fig, ...
-                [-this.W/2; this.W/2; this.W/2; -this.W/2]*this.scale, ...
-                [0; 0; this.H; this.H], 'w');
-                    boxX = [-this.W/2 this.W/2 this.W/2 -this.W/2 -this.W/2]'.*this.scale;
-                boxY = [0 0 this.H this.H 0]'.*this.scale;
-                plot(this.fig, boxX, boxY, 'k');       
-                this.init_done = 1;
-        end
-        
-        % lives
-        if (isempty(this.h_lives))
-            for i=1:this.lives
-                this.h_lives{i}=plot(this.fig, ...
+    function draw_init(this)
+        % 1st initialization
+        axes(this.fig)            
+        set(this.fig, 'DefaultLineLineWidth', 2);
+        axis(this.fig, 'off');           
+        hold(this.fig, 'on');
+        cla(this.fig);
+        axis(this.fig, 'equal');
+        axis(this.fig, [-this.W/2 this.W/2 0 this.H]*this.scale)        
+        fill(this.fig, ...
+            [-this.W/2; this.W/2; this.W/2; -this.W/2]*this.scale, ...
+            [0; 0; this.H; this.H], 'w');
+        boxX = [-this.W/2 this.W/2 this.W/2 -this.W/2 -this.W/2]'.*this.scale;
+        boxY = [0 0 this.H this.H 0]'.*this.scale;
+        this.frame.plot(this.fig, boxX, boxY, 'Color', [0, 0, 0]);       
+    end
+    
+    function draw(this)                  
+        for i=1:this.lives
+            this.h_lives{i}.plot(this.fig, ...
                 [-this.W/2 this.W/2]'*this.scale, ...
-                 ones(2,1)*i*2*this.scale, 'g');
-            end
-        else
-            for i=(this.lives+1):length(this.h_lives)
-                if i>0 && i<= length(this.h_lives)
-                    set(this.h_lives{i},'Visible','off');
-                end
+                 ones(2,1)*i*2*this.scale, 'Color', [0 1 0]);
+             this.h_lives{i}.show();
+        end
+
+        for i=(this.lives+1):numel(this.h_lives)
+            if i>0 && i<= length(this.h_lives)
+                this.h_lives{i}.show(false);
             end
         end
         
@@ -342,7 +345,9 @@ methods(Access=public)
                         this.gun.cooldown));
         end
 
-        this.gun.draw(this.fig, this.scale);                          
+        this.gun.draw(this.fig, this.scale);     
+        
+        this.frame.bring_to_front;
         
         return
     end   
@@ -407,121 +412,12 @@ methods(Access=public)
         this.gun.hard_stop();
     end
     
-    function update_LTI(~)
+    function update_LTI(this, C, G)        
     % Update things on the fly... yikes!
     % For changes in PID parameters, T, ...
-%         s=tf('s');
-%         
-%         %this.C_Kn = 1/this.T;
-%         
-%         fprintf('P=%.2f I=%.2f D=%.2f N=%.2f\n', ...
-%             this.C_Kp, this.C_Ki, this.C_Kd, this.C_Kn);
-%                 
-%         % 1st order gun
-%         this.G_Gun = dtf(this.speed/(this.tau*s+1), this.T);
-% 
-%         % Controller
-%         this.G_C = dtf(this.C_Kp + this.C_Ki/s + ...
-%             this.C_Kd*this.C_Kn*s/(s+this.C_Kn), this.T);
-%         this.G_C.ctf
-%         
-%         % Integrator
-%         this.G_I = dtf(1/s, this.T);   
-%         
-%         disp('ZEROS');
-%         zero(feedback(this.G_C.ctf*this.G_Gun.ctf*this.G_I.ctf, 1))
-%         disp('POLES');
-%         pole(feedback(this.G_C.ctf*this.G_Gun.ctf*this.G_I.ctf, 1))
-%     
-%         this.hard_stop();                
-    end
-    
-    function update_error_plot(this, axe)
-        axes(axe);
-        cla(axe);
-        hold(axe, 'on');
-        
-        s=tf('s');
- 
-        % step error response
-        impulse(axe, ...
-                c2d(1/s, this.T) - ...
-                c2d(1/s, this.T)*feedback(this.G_C.tf * this.G_Gun.tf * this.G_I.tf, 1));
-        % ramp error response
-        impulse(axe, ...
-                c2d(1/s^2, this.T) - ...
-                c2d(1/s^2, this.T)*feedback(this.G_C.tf * this.G_Gun.tf * this.G_I.tf, 1));
-        %title('Manual response')
-        
-        title(axe, '');
-        xlabel(axe, '');
-        ylabel(axe, '');
-        drawnow
-    end    
-    
-    function update_response_plot(this, axe)        
-        axes(axe);
-        cla(axe);
-        hold(axe, 'on');   
-        
-        % motor speed response
-        step(axe, this.G_Gun.tf/this.speed); % normalized to unity        
-        % controlled position response
-        step(axe, feedback(this.G_C.tf * this.G_Gun.tf * this.G_I.tf, 1));
-        axis auto
-        
-        title(axe, '');
-        ylabel(axe, '');     
-        drawnow
-    end
-    
-    function update_siso_plot(this, axe)
-        axes(axe);
-        cla(axe);
-        hold(axe, 'on');
-        
-        if numel(this.hist_vx) > 1
-            X=(-numel(this.hist_vx)+1:0)' * this.T;
-            plot(axe, ...
-                 X, this.hist_vx/this.speed, ...
-                 X, this.hist_Vr/this.Vr_max, ...
-                 X, this.hist_Cr/this.Vr_max);
-            axis([-this.max_hist_time 0 -1.05 1.05])
-        end
-        
-        title(axe, '');
-        xlabel(axe, '');
-        ylabel(axe, '');
-        drawnow
-    end    
-    
-    function update_rlocus(this, axe, continuous)
-        axes(axe);
-        cla(axe);
-        hold(axe, 'on');
-        
-        if continuous
-            % r-locus:
-            rlocus(axe, this.G_C.ctf * this.G_Gun.ctf * this.G_I.ctf);
-            % poles/zeros:
-            rlocus(axe, this.G_C.ctf, 'r', this.G_Gun.ctf * this.G_I.ctf, 'k', 0);
-            % closed-loop poles:
-            rlocus(axe, feedback(this.G_C.ctf * this.G_Gun.ctf * this.G_I.ctf, 1), 'g', 0);
-        else
-            % r-locus:
-            rlocus(axe, this.G_C.tf * this.G_Gun.tf * this.G_I.tf);
-            % poles/zeros:
-            rlocus(axe, this.G_C.tf, 'r', this.G_Gun.tf * this.G_I.tf, 'k', 0);
-            % closed-loop poles:
-            rlocus(axe, feedback(this.G_C.tf * this.G_Gun.tf * this.G_I.tf, 1), 'g', 0);
-        end
-        
-        title(axe, '');
-    end
-    
-    function update_loop(this, loop)
-        this.i_loop = loop;
-    end
+    % Receives ideal s-tf Controller and Plant
+        this.loop = loop_single(@tf_factory.ss, this.T, C*G, 1);          
+    end        
     
     function tic(this)
         this.start = tic;

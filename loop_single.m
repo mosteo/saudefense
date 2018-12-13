@@ -1,13 +1,17 @@
 classdef loop_single < i_loop
     
 properties
-    stf, dtf
+    stf, dtf    
+    G, H
 end
     
 methods(Static)
     function this = loop_single(tff, T, G, H)
     % requires a tf factory and period 
-    % requires direct and back continuous TFs                
+    % requires direct and back continuous TFs   
+    
+        this.G = G;
+        this.H = H;
     
         this.stf = feedback(G, H);
         this.dtf = tff(this.stf, T);

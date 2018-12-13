@@ -8,10 +8,14 @@ end
 properties
     id    = 0  % last target id to detect changes    
     flash = 0  % counter to flash the reticle on target change
-    h     = drawer;
+    h          % drawer()
 end
     
 methods    
+    
+    function this = reticle()
+        this.h = drawer();
+    end
     
     function draw(this, fig, id, x, y, scale, color)
         if id ~= this.id

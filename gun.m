@@ -12,7 +12,7 @@ properties(Constant)
     a_arm   =  2  % max accel allowing fire
     
     firing_len   = 0.5  % time a firing lasts   
-    cooldown_len = 1    % time until next shot ready    
+    cooldown_len = 1    % time until next shot ready        
 end
     
 properties
@@ -23,22 +23,29 @@ properties
     armed    = true;         
     autofire = true;
     
+    G, H
+    
     gun_ready = 2;   % (disarmed, armed, cooling, firing) (positive)
     
     target   = []    % An instance of i_killable
     
-    h_gun;
-    h_ray;
+    h_gun   % Drawers 
+    h_ray
 end
     
 methods
     
     function this = gun(loop)
         % set dynamics        
-        this.loop = loop;        
+        this.loop = loop;
+        this.G    = loop.G;
+        this.H    = loop.H;
         
         this.x = 0;
         this.y = 0;
+        
+        this.h_gun = drawer();
+        this.h_ray = drawer();
     end
    
     function draw(this, axis, scale)
@@ -55,29 +62,19 @@ methods
         
         this.gun_ready = gs;
         
-        if isempty(this.h_gun)
-            this.h_gun=plot(axis, ...
-                this.x*scale, 0, this.mark_armed{gs}, 'MarkerSize', this.size)
-        else
-            this.h_gun.XData = this.x*scale;
-            this.h_gun.Marker = this.mark_armed{gs};
-        end
+        this.h_gun.plot(axis, ...
+            this.x*scale, 0, 'Marker', this.mark_armed{gs}, ...
+            'MarkerSize', this.size, 'Color', [0 0 0.5]);
         
         
         if (this.firing > 0)
             rayX = [this.x this.x]*scale;
             rayY = [0 saudefense.H]*scale;
-            if isempty(this.h_ray)
-                this.h_ray=plot(axis, rayX', rayY', 'r-');
-            else
-                this.h_ray.XData = rayX';
-                this.h_ray.YData = rayY';
-            end
+                        
+            this.h_ray.plot(axis, rayX', rayY', 'Color', [1 0 0]);
+            this.h_ray.show;            
         else
-            if (~isempty(this.h_ray)) && isvalid(this.h_ray)
-                delete(this.h_ray);
-                this.h_ray = [];
-            end
+            this.h_ray.show(false);
         end        
     end
     
