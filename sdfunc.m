@@ -6,7 +6,7 @@ methods(Static)
 
     function h = init(handles)        
         handles.initializing.Position = [0 0 1 1];
-        drawnow
+        %drawnow
 
         handles.props = props;
         handles.props.busy = true;
@@ -20,7 +20,7 @@ methods(Static)
         [C, G] = sdfunc.gui_LTI_config(handles);        
         
         handles.sau = saudefense(handles.battle, ...
-            loop_single(@tf_factory.ss, 0.05, C*G, 1));
+            loop_single(handles.props.tff, 0.05, C*G, 1));
         sau = handles.sau;
 
         handles.closing = false; % True after figure starts closing
@@ -65,8 +65,10 @@ methods(Static)
                 handles.sau.difficulty = handles.props.difficulty;
                 handles.props.diff_changed = false;
             else
+                handles.props.difficulty = handles.sau.difficulty;
                 handles.difficulty.Value = handles.sau.difficulty;
             end
+            
             sdfunc.update_difficulty_panel(handles);
 
             handles.sau.tic()
@@ -78,7 +80,7 @@ methods(Static)
             
             sdfunc.update_texts(handles, handles.sau);    
             
-%             drawnow
+            drawnow limitrate nocallbacks
             
             handles.sau.toc();
         end
@@ -151,7 +153,7 @@ methods(Static)
         title(axe, '');
         xlabel(axe, '');
         ylabel(axe, '');
-        drawnow
+        %drawnow
     end    
     
     function update_response_plot(axe, C, G)        
@@ -168,7 +170,7 @@ methods(Static)
         
         title(axe, '');
         ylabel(axe, '');     
-        drawnow
+        %drawnow
     end
     
     function update_siso_plot(handles)               
@@ -185,7 +187,7 @@ methods(Static)
 %         title(axe, '');
 %         xlabel(axe, '');
 %         ylabel(axe, '');
-        % drawnow
+        % %drawnow
     end    
     
     function update_rlocus(axe, C, G)
@@ -200,7 +202,7 @@ methods(Static)
         rlocus(axe, feedback(C*G, 1), 'r', 0);
         
         title(axe, '');
-        drawnow
+        %drawnow
     end
     
     function update_LTI(h, force)
@@ -213,11 +215,11 @@ methods(Static)
         end
 
         h.updating.Visible = 'on';
-        drawnow
+        %drawnow
 
         [C, G] = sdfunc.gui_LTI_config(h);
 
-        h.sau.update_LTI(C, G);
+        h.sau.update_LTI(h.props.tff, C, G);
         
         % TODO: obtain C, G, from sau as it is being used (if discretized)
 
@@ -226,7 +228,7 @@ methods(Static)
         sdfunc.update_rlocus(h.rlocus, C, G);
 
         h.updating.Visible = 'off';
-        drawnow
+        %drawnow
     end
 
 end

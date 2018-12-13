@@ -415,14 +415,15 @@ methods(Access=public)
         this.gun.hard_stop();
     end
     
-    function update_LTI(this, C, G)        
+    function update_LTI(this, tff, C, G)        
     % Update things on the fly... yikes!
     % For changes in PID parameters, T, ...
     % Receives ideal s-tf Controller and Plant
-    C
-    G
-        this.loop = loop_single(@tf_factory.ss, this.T, C*G, 1); 
+        disp('Controller: '); C
+        disp('Plant: ');      G
+        this.loop = loop_single(tff, this.T, C*G, 1); 
         this.gun.loop = this.loop;
+        this.gun.x = 0;
     end        
     
     function tic(this)

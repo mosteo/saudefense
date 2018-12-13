@@ -15,6 +15,8 @@ properties(Access=public)
     h_r
     h_y  % Drawers for history
     
+    tff = @tf_factory.ss;
+    
 end
 
 methods(Static)

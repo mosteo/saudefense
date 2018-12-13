@@ -133,7 +133,7 @@ else
     handles.props.running = false;
 end
 handles.start.Enable = 'off';
-drawnow
+% drawnow
 handles.start.Enable = 'on';
 handles.props.busy = false;
 
@@ -173,15 +173,18 @@ function period_Callback(hObject, eventdata, handles)
 if handles.props.running    
     stop(handles.looper);
 end
+handles.sau.T = str2double(hObject.String);
 if handles.sau.T < 0.001 
     handles.sau.T = 0.001;
     handles.period.String= '0.001';
 end
 
-handles.sau.T = str2double(hObject.String);
 handles.looper.Period = handles.sau.T;
 
 sdfunc.update_LTI(handles);
+
+% drawnow
+
 if handles.props.running
     start(handles.looper);
 end
