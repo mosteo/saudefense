@@ -57,12 +57,17 @@ properties
     max_hist_time = 10 % Seconds of history to keep
     hist_r = []
     hist_y = []
+    plot_hist = true;
+    hist_frac = 0.2 % Fraction reserved for history at bottom
     
     nogui = false; % if this.forever is used, this will be true
     
     txt_score   % Drawers
     txt_status
-    frame      
+    frame  
+    
+    h_r
+    h_y
     
     h_lives = cell(saudefense.initial_lives, 1);
 end
@@ -154,6 +159,9 @@ methods(Access=public)
         this.txt_score  = drawer();
         this.txt_status = drawer();
         this.frame      = drawer();
+        this.h_r        = drawer();
+        this.h_y        = drawer();
+        
         this.target_reticle=reticle();
         this.gun = gun(loop);        
         this.fig = battle_handle;
@@ -295,7 +303,13 @@ methods(Access=public)
         hold(this.fig, 'on');
         cla(this.fig);
         axis(this.fig, 'equal');
-        axis(this.fig, [-this.W/2 this.W/2 0 this.H]*this.scale)        
+        
+        if this.plot_hist
+             axis(this.fig, [-this.W/2 this.W/2 -this.H*this.hist_frac this.H]*this.scale)        
+        else
+            axis(this.fig, [-this.W/2 this.W/2 0 this.H]*this.scale)        
+        end
+        
         fill(this.fig, ...
             [-this.W/2; this.W/2; this.W/2; -this.W/2]*this.scale, ...
             [0; 0; this.H; this.H], 'w');
@@ -347,7 +361,18 @@ methods(Access=public)
                         this.gun.cooldown));
         end
 
-        this.gun.draw(this.fig, this.scale);     
+        this.gun.draw(this.fig, this.scale); 
+        
+        % History
+        if this.plot_hist && numel(this.hist_r)>1
+            y=(-numel(this.hist_r)+1:0)/ ...
+                (this.max_hist_time/this.T)*... % normalized to 1
+                this.hist_frac*this.H*this.scale;
+            this.h_r.plot(this.fig, this.hist_r*this.scale, y', ...
+                'LineWidth', 1, 'Color', [1 0 0]);
+            this.h_y.plot(this.fig, this.hist_y*this.scale, y', ...
+                'LineWidth', 1, 'Color', [0 0 0.7]);
+        end
         
         this.frame.bring_to_front;
         

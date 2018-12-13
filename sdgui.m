@@ -247,8 +247,6 @@ handles.props.diff_changed = true;
 handles.props.difficulty   = hObject.Value;
 sdfunc.update_difficulty_panel(handles);
 
-function do_siso_Callback(~,~,~)
-
 % --- Executes during object creation, after setting all properties.
 function difficulty_CreateFcn(hObject, eventdata, handles)
 % hObject    handle to difficulty (see GCBO)
