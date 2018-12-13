@@ -8,8 +8,7 @@ methods(Static)
         handles.initializing.Position = [0 0 1 1];
         %drawnow
 
-        handles.props = props;
-        handles.props.busy = true;
+        handles.props = props();
 
         axes(handles.diagram);
         diagram = imread('diagram.jpg');
@@ -23,17 +22,8 @@ methods(Static)
             loop_single(handles.props.tff, 0.05, C*G, 1));
         sau = handles.sau;
 
-        handles.closing = false; % True after figure starts closing
-
         handles.difficulty.Value = sau.difficulty;
         sdfunc.update_difficulty_panel(handles);
-
-        handles.looper = timer;
-        handles.looper.ExecutionMode = 'fixedRate';
-        handles.looper.Period = handles.sau.T;
-        handles.looper.UserData = handles.sau;
-        handles.looper.TimerFcn = @(~,~)sdfunc.looper(handles);
-        handles.looper.StartDelay = 0.2;
 
         handles.autoaim.Value = sau.auto_aim;
         handles.autofire.Value = sau.gun.autofire;
@@ -42,7 +32,6 @@ methods(Static)
 
         sdfunc.update_LTI(handles);
 
-        handles.props.busy   = false;
         handles.start.Enable = 'on';
         handles.initializing.Visible = 'off';
         
@@ -54,35 +43,24 @@ methods(Static)
     end
     
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    function looper(handles)
-        if handles.props.pending
-            handles.props.pending = false;
-            sdfunc.update_LTI(handles, true);
+    function looper(h)      
+        h.sau.tic()
+        h.sau.iterate();
+
+        if h.do_siso.Value
+            sdfunc.update_siso_plot(h);
         end
-        
-        if ~handles.props.closing && ~handles.props.busy            
-            if handles.props.diff_changed
-                handles.sau.difficulty = handles.props.difficulty;
-                handles.props.diff_changed = false;
-            else
-                handles.props.difficulty = handles.sau.difficulty;
-                handles.difficulty.Value = handles.sau.difficulty;
-            end
-            
-            sdfunc.update_difficulty_panel(handles);
 
-            handles.sau.tic()
-            handles.sau.iterate();
+        sdfunc.update_difficulty_panel(h);
+        sdfunc.update_texts(h, h.sau);    
 
-            if handles.do_siso.Value
-                sdfunc.update_siso_plot(handles);
-            end
-            
-            sdfunc.update_texts(handles, handles.sau);    
-            
-            drawnow limitrate nocallbacks
-            
-            handles.sau.toc();
+        drawnow limitrate
+
+        spare = h.sau.T - h.sau.toc();
+        if spare > 0.001
+            pause(spare);
+%         else
+%             fprintf(2,'falling behing!\n');
         end
     end        
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -103,7 +81,7 @@ methods(Static)
     
     function update_difficulty_panel(h)
         h.panel_difficulty.Title = ...
-            sprintf('Difficulty: %5.3f', h.props.difficulty);
+            sprintf('Difficulty: %5.3f', h.sau.difficulty);
     end
 
     function update_texts(h, sau)
@@ -205,17 +183,9 @@ methods(Static)
         %drawnow
     end
     
-    function update_LTI(h, force)
-        if nargin < 2
-            force = false;
-        end
-        if h.props.running && ~force
-            h.props.pending = true;
-            return
-        end
-
+    function update_LTI(h)        
         h.updating.Visible = 'on';
-        %drawnow
+        drawnow
 
         [C, G] = sdfunc.gui_LTI_config(h);
 
@@ -228,7 +198,7 @@ methods(Static)
         sdfunc.update_rlocus(h.rlocus, C, G);
 
         h.updating.Visible = 'off';
-        %drawnow
+        drawnow
     end
 
 end

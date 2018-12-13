@@ -22,7 +22,7 @@ function varargout = sdgui(varargin)
 
 % Edit the above text to modify the response to help sdgui
 
-% Last Modified by GUIDE v2.5 13-Dec-2018 18:20:09
+% Last Modified by GUIDE v2.5 13-Dec-2018 19:36:05
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -74,7 +74,6 @@ function varargout = sdgui_OutputFcn(hObject, eventdata, handles)
 varargout{1} = [];
 
 
-
 function Kp_Callback(hObject, eventdata, handles)
 % hObject    handle to Kp (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
@@ -122,30 +121,16 @@ function start_Callback(hObject, eventdata, handles)
 % hObject    handle to start (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
-handles.props.busy = true;
-if ~handles.props.running
-    handles.start.String = 'Pause';
-    handles.props.running = true;
-    start(handles.looper);
-else       
-    handles.start.String = 'GO!';    
-    stop(handles.looper);
+if handles.props.running
     handles.props.running = false;
-end
-handles.start.Enable = 'off';
-% drawnow
-handles.start.Enable = 'on';
-handles.props.busy = false;
-
-
-% --- Executes during object deletion, before destroying properties.
-function window_DeleteFcn(hObject, eventdata, handles)
-% hObject    handle to window (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-if isfield(handles, 'looper') && isvalid(handles.looper)
-    stop(handles.looper);
-    delete(handles.looper);
+    handles.start.String = 'GO!';
+else
+    handles.props.running = true;
+    handles.start.String = 'Pause';
+    
+    while handles.props.running
+        sdfunc.looper(handles);
+    end
 end
 
 
@@ -165,29 +150,18 @@ function autofire_Callback(hObject, eventdata, handles)
 handles.sau.gun.autofire = hObject.Value ~= 0;
 
 
-
 function period_Callback(hObject, eventdata, handles)
 % hObject    handle to period (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
-if handles.props.running    
-    stop(handles.looper);
-end
 handles.sau.T = str2double(hObject.String);
 if handles.sau.T < 0.001 
     handles.sau.T = 0.001;
     handles.period.String= '0.001';
 end
-
 handles.looper.Period = handles.sau.T;
 
 sdfunc.update_LTI(handles);
-
-% drawnow
-
-if handles.props.running
-    start(handles.looper);
-end
 
 % --- Executes during object creation, after setting all properties.
 function period_CreateFcn(hObject, eventdata, handles)
@@ -244,7 +218,6 @@ if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgr
 end
 
 
-
 function tau_Callback(hObject, eventdata, handles)
 % hObject    handle to tau (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
@@ -274,6 +247,8 @@ handles.props.diff_changed = true;
 handles.props.difficulty   = hObject.Value;
 sdfunc.update_difficulty_panel(handles);
 
+function do_siso_Callback(~,~,~)
+
 % --- Executes during object creation, after setting all properties.
 function difficulty_CreateFcn(hObject, eventdata, handles)
 % hObject    handle to difficulty (see GCBO)
@@ -291,27 +266,17 @@ function window_CloseRequestFcn(hObject, eventdata, handles)
 % hObject    handle to window (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
-if handles.props.busy; return; end
 if handles.props.running
     start_Callback(handles.start, eventdata, handles);
     return
 end
-handles.props.closing = true;
-stop(handles.looper);
-%delete(handles.looper);
 delete(hObject);
+
+
+function window_DeleteFcn(~,~,~)
 
 
 % --- Executes on mouse motion over figure - except title and menu.
 function window_WindowButtonMotionFcn(hObject, eventdata, handles)
 % DOES NOTHING BUT IS NEEDED TO ENABLE FLUID MOUSE COORDS CAPTURE
 % See https://www.mathworks.com/help/matlab/ref/matlab.graphics.axis.axes-properties.html
-
-
-% --- Executes on button press in do_siso.
-function do_siso_Callback(hObject, eventdata, handles)
-% hObject    handle to do_siso (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-
-% Hint: get(hObject,'Value') returns toggle state of do_siso
