@@ -41,7 +41,7 @@ methods
         end
         
         if ~isempty(this.h)
-            if visible
+            if visible && isvalid(this.h)
                 this.h.Visible = 'On';
             else
                 this.h.Visible = 'Off';

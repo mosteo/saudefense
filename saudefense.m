@@ -72,8 +72,9 @@ end
 methods(Static)
     function demo(T, C, G)
     % Function to test/demo saudefense without a GUI
+
         if nargin < 1
-            T = 0.05;
+            T = 0.01;
         end
 
         if nargin < 2
@@ -87,7 +88,7 @@ methods(Static)
             G = motor.get_tf;
         end
 
-        tff = @tf_factory.z;                   
+        tff = @tf_factory.z;
 
         loop = loop_single(tff, T, C*G, 1);
 
@@ -95,6 +96,34 @@ methods(Static)
         sau = saudefense(gca, loop);
         sau.forever;
     end
+    
+    function demo_ss(T, C, G)
+    % Function to test/demo saudefense with SS model without a GUI
+
+        if nargin < 1
+            T = 0.01;
+        end
+
+        if nargin < 2
+            PID = controller_pid_ideal;
+            PID.set_PID(0.4, 0, 0); 
+            C = PID.get_tf;
+        end
+
+        if nargin < 3
+            motor = motor_mbk(0.001, 0.01, 0.0);
+            G = 30 * motor.get_tf;
+        end
+
+        tff = @tf_factory.ss;   
+
+        loop = loop_single(tff, T, C*G, 1);
+
+        figure(33);
+        sau = saudefense(gca, loop);
+        sau.forever;
+    end
+    
 end
 
 methods(Access=private)
