@@ -321,7 +321,8 @@ function pop_plant_Callback(hObject, eventdata, handles)
 
 % Hints: contents = cellstr(get(hObject,'String')) returns pop_plant contents as cell array
 %        contents{get(hObject,'Value')} returns selected item from pop_plant
-
+sdfunc.init_tfpanels(handles);
+sdfunc.update_LTI(handles);
 
 % --- Executes during object creation, after setting all properties.
 function pop_plant_CreateFcn(hObject, eventdata, handles)

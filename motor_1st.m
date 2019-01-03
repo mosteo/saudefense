@@ -1,4 +1,4 @@
-% A motor that has 1st order response (plus integrator!)
+% A motor that has 1st order response
 
 classdef motor_1st < i_tf
     
@@ -17,7 +17,7 @@ methods
     
     function ctf = get_tf(this)
         s = tf('s');
-        ctf = this.mu/(this.tau*s + 1)/s;
+        ctf = this.mu/(this.tau*s + 1);
     end
     
 end

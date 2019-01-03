@@ -60,18 +60,35 @@ methods(Static)
         delete(allchild(handles.p_plant));        
         
         % Controller
-        handles.pop_controller.Value
         switch handles.pop_controller.Value
             case 1
-                handles.props.widget_controller = panel_pd();
+                handles.props.widget_controller = panel_p();
             case 2
+                handles.props.widget_controller = panel_pd();
+            case 3
                 handles.props.widget_controller = panel_pid();
+            case 4
+                handles.props.widget_controller = panel_pid_kzz();
+            case 5
+                handles.props.widget_controller = panel_lead_net();
             otherwise
                 error('Unknown controller: %s', handles.pop_controller.Value)
         end
         handles.props.widget_controller.prepare(handles.p_controller);
+                
+        % Plant
+        switch handles.pop_plant.Value
+            case 1
+                handles.props.widget_plant = panel_motor_mbk();
+            case 2
+                handles.props.widget_plant = panel_motor_1st();
+            case 3
+                handles.props.widget_plant = panel_motor_2nd();
+            otherwise
+                error('Unknown plant: %s', handles.pop_plant.Value)
+        end
+        handles.props.widget_plant.prepare(handles.p_plant);
         
-        % Plant (TBD)
     end
     
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -98,19 +115,8 @@ methods(Static)
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     
     function [C, G] = gui_LTI_config(h)
-        tau   = str2double(h.tau.String);
-        motor = motor_1st(10, tau);
-
-%         Kp = str2double(h.Kp.String);
-%         Ki = str2double(h.Ki.String);
-%         Kd = str2double(h.Kd.String);
-%         PID = controller_pid_ideal();
-%         PID.set_PID(Kp, Ki, Kd);
-%         
-%         C = PID.get_tf();
-
         C = h.props.widget_controller.get_tf();
-        G = motor.get_tf();
+        G = h.props.widget_plant.get_tf();
     end
     
     function update_difficulty_panel(h)
@@ -165,6 +171,8 @@ methods(Static)
         title(axe, '');
         xlabel(axe, '');
         ylabel(axe, '');
+        
+        legend(axe, 'step error', 'ramp error', 'Location', 'northwest');
         %drawnow
     end    
     
@@ -179,6 +187,8 @@ methods(Static)
         % controlled position response
         step(axe, feedback(C*G, 1), 'b');
         axis auto
+        
+        legend(axe, 'uncompensated', 'compensated', 'Location', 'southwest');
         
         title(axe, '');
         ylabel(axe, '');     
@@ -207,11 +217,19 @@ methods(Static)
         cla(axe);
         hold(axe, 'on');
         
+        set(axe, 'DefaultLineMarkerSize', 10);
+        set(axe, 'DefaultLineLineWidth', 2);
+        
         % r-locus:
-        rlocus(axe, C*G);
+        rlocus(axe, C*G, 'b');
 
         % closed-loop poles:
         rlocus(axe, feedback(C*G, 1), 'r', 0);
+        
+        h = zeros(2, 1);
+        h(1) = plot(NaN,NaN,'xb');
+        h(2) = plot(NaN,NaN,'xr');
+        legend(h, 'open-loop C(s)·G(s)', 'closed-loop poles');
         
         title(axe, '');
         %drawnow

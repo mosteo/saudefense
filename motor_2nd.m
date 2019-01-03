@@ -1,4 +1,4 @@
-% A motor that has 2nd order response (plus integrator!)
+% A motor that has 2nd order response
 
 classdef motor_2nd < i_tf
     

@@ -2,6 +2,9 @@ classdef props < handle
 % Ref class to avoid updating the handles every time
 
 properties(Access=public)  
+    forreal = false % SET TO TRUE TO AVOID STUDENTS CHANGING CERTAIN THINGS
+    % Currently: no effect
+    
     running % Simulation is running
     
     widget_controller
