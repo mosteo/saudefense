@@ -4,6 +4,9 @@ classdef props < handle
 properties(Access=public)  
     running % Simulation is running
     
+    widget_controller
+    widget_plant        % Widgets of class i_tfwidget
+    
     h_r
     h_y  % Drawers for history
     

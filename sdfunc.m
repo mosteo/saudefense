@@ -3,6 +3,10 @@ classdef sdfunc
 % the automatic callbacks created by Matlab
    
 methods(Static)
+    
+    function common_callback(~, ~) % hObject, eventdata
+        sdfunc.update_LTI(guidata(gcf));
+    end
 
     function h = init(handles)        
         handles.initializing.Position = [0 0 1 1];
@@ -10,12 +14,17 @@ methods(Static)
 
         handles.props = props();
 
+        % Control diagram
         axes(handles.diagram);
         diagram = imread('diagram2.jpg');
         dpos    = handles.diagram.Position;
         diagram = imresize(diagram, [dpos(4) dpos(3)]);
         imshow(diagram);
+        
+        % Initialize panels
+        sdfunc.init_tfpanels(handles);
 
+        % Get TFs
         [C, G] = sdfunc.gui_LTI_config(handles);        
         
         handles.sau = saudefense(handles.battle, ...
@@ -45,6 +54,18 @@ methods(Static)
         disp('Ready');
     end
     
+    function init_tfpanels(handles)
+        % Clean previous
+        delete(allchild(handles.p_controller));
+        delete(allchild(handles.p_plant));        
+        
+        % Controller
+        handles.props.widget_controller = panel_pid();
+        handles.props.widget_controller.prepare(handles.p_controller);
+        
+        % Plant (TBD)
+    end
+    
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     function looper(h)      
         h.sau.tic()
@@ -72,13 +93,15 @@ methods(Static)
         tau   = str2double(h.tau.String);
         motor = motor_1st(10, tau);
 
-        Kp = str2double(h.Kp.String);
-        Ki = str2double(h.Ki.String);
-        Kd = str2double(h.Kd.String);
-        PID = controller_pid_ideal();
-        PID.set_PID(Kp, Ki, Kd);
-        
-        C = PID.get_tf();
+%         Kp = str2double(h.Kp.String);
+%         Ki = str2double(h.Ki.String);
+%         Kd = str2double(h.Kd.String);
+%         PID = controller_pid_ideal();
+%         PID.set_PID(Kp, Ki, Kd);
+%         
+%         C = PID.get_tf();
+
+        C = h.props.widget_controller.get_tf();
         G = motor.get_tf();
     end
     
