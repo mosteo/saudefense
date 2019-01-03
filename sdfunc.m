@@ -11,7 +11,7 @@ methods(Static)
         handles.props = props();
 
         axes(handles.diagram);
-        diagram = imread('diagram.jpg');
+        diagram = imread('diagram2.jpg');
         dpos    = handles.diagram.Position;
         diagram = imresize(diagram, [dpos(4) dpos(3)]);
         imshow(diagram);
