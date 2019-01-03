@@ -60,7 +60,15 @@ methods(Static)
         delete(allchild(handles.p_plant));        
         
         % Controller
-        handles.props.widget_controller = panel_pid();
+        handles.pop_controller.Value
+        switch handles.pop_controller.Value
+            case 1
+                handles.props.widget_controller = panel_pd();
+            case 2
+                handles.props.widget_controller = panel_pid();
+            otherwise
+                error('Unknown controller: %s', handles.pop_controller.Value)
+        end
         handles.props.widget_controller.prepare(handles.p_controller);
         
         % Plant (TBD)

@@ -22,7 +22,7 @@ function varargout = sdgui(varargin)
 
 % Edit the above text to modify the response to help sdgui
 
-% Last Modified by GUIDE v2.5 03-Jan-2019 18:26:33
+% Last Modified by GUIDE v2.5 03-Jan-2019 19:38:31
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -288,19 +288,21 @@ handles.sau.plot_hist = hObject.Value;
 handles.sau.draw_fix_axis;
 
 
-% --- Executes on selection change in popupmenu1.
-function popupmenu1_Callback(hObject, eventdata, handles)
-% hObject    handle to popupmenu1 (see GCBO)
+% --- Executes on selection change in pop_controller.
+function pop_controller_Callback(hObject, eventdata, handles)
+% hObject    handle to pop_controller (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 
-% Hints: contents = cellstr(get(hObject,'String')) returns popupmenu1 contents as cell array
-%        contents{get(hObject,'Value')} returns selected item from popupmenu1
+% Hints: contents = cellstr(get(hObject,'String')) returns pop_controller contents as cell array
+%        contents{get(hObject,'Value')} returns selected item from pop_controller
+sdfunc.init_tfpanels(handles);
+sdfunc.update_LTI(handles);
 
 
 % --- Executes during object creation, after setting all properties.
-function popupmenu1_CreateFcn(hObject, eventdata, handles)
-% hObject    handle to popupmenu1 (see GCBO)
+function pop_controller_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to pop_controller (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    empty - handles not created until after all CreateFcns called
 
@@ -311,19 +313,19 @@ if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgr
 end
 
 
-% --- Executes on selection change in popupmenu2.
-function popupmenu2_Callback(hObject, eventdata, handles)
-% hObject    handle to popupmenu2 (see GCBO)
+% --- Executes on selection change in pop_plant.
+function pop_plant_Callback(hObject, eventdata, handles)
+% hObject    handle to pop_plant (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 
-% Hints: contents = cellstr(get(hObject,'String')) returns popupmenu2 contents as cell array
-%        contents{get(hObject,'Value')} returns selected item from popupmenu2
+% Hints: contents = cellstr(get(hObject,'String')) returns pop_plant contents as cell array
+%        contents{get(hObject,'Value')} returns selected item from pop_plant
 
 
 % --- Executes during object creation, after setting all properties.
-function popupmenu2_CreateFcn(hObject, eventdata, handles)
-% hObject    handle to popupmenu2 (see GCBO)
+function pop_plant_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to pop_plant (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    empty - handles not created until after all CreateFcns called
 
