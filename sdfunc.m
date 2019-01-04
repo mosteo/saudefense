@@ -27,10 +27,10 @@ methods(Static)
         % Get TFs
         [C, G] = sdfunc.gui_LTI_config(handles);        
         
-        handles.sau = saudefense(handles.battle, ...
-            loop_single(handles.props.tff, 0.05, C*G, 1));
+        handles.props.sau = saudefense(handles.battle, ...
+            loop_single(handles.props.tff, sdconst.default_period, C*G, 1));
 
-        sau = handles.sau;
+        sau = handles.props.sau;
 
         sau.plot_hist = handles.do_siso.Value;
         
@@ -52,6 +52,19 @@ methods(Static)
         
         h = handles;
         disp('Ready');
+    end
+    
+    function reset(h)
+    % Reinitializes minimal things to start a new competition
+        % Get TFs
+        [C, G] = sdfunc.gui_LTI_config(h);        
+        
+        % Fresh SAU
+        period = str2double(h.period.String);
+        h.props.sau = saudefense(h.battle, ...
+            loop_single(h.props.tff, period, C*G, 1));
+        
+        h.difficulty.Value = h.props.sau.difficulty;
     end
     
     function init_tfpanels(handles)
@@ -92,20 +105,16 @@ methods(Static)
     end
     
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    function looper(h)      
-        h.sau.tic()
-        h.sau.iterate();
-
-%         if h.do_siso.Value
-%             sdfunc.update_siso_plot(h);
-%         end
+    function done = looper(h)      
+        h.props.sau.tic()
+        done = h.props.sau.iterate();
 
         sdfunc.update_difficulty_panel(h);
-        sdfunc.update_texts(h, h.sau);    
+        sdfunc.update_texts(h, h.props.sau);    
 
         drawnow limitrate
 
-        spare = h.sau.T - h.sau.toc();
+        spare = h.props.sau.T - h.props.sau.toc();
         if spare > 0.001
             pause(spare);
 %         else
@@ -114,6 +123,78 @@ methods(Static)
     end        
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     
+    function enable_all(h, enable)
+        enabled = sdconst.onoff(enable);
+        
+        h.difficulty.Enable = enabled;
+        h.pop_controller.Enable = enabled;
+        h.pop_plant.Enable = enabled;
+        
+        for w=[allchild(h.p_controller); allchild(h.p_plant)]'
+            if isprop(w, 'Enable')
+                w.Enable = enabled;
+            end
+        end
+    end
+
+    function start_stop(h, compete)        
+        h.props.running   = ~h.props.running;
+        if h.props.running
+            disp('Running...');
+        else
+            disp('Stopped.');
+        end
+        
+        % Disable contrary
+        if compete
+            h.start.Enable = sdconst.onoff(~h.props.running);            
+        else
+            h.compete.Enable = sdconst.onoff(~h.props.running);
+        end
+                
+        if h.props.running
+            if compete
+                h.compete.String = 'Pause';
+                sdfunc.enable_all(h, false);
+            else
+                h.start.String = 'Pause';
+                sdfunc.enable_all(h, true);
+            end            
+        else
+            h.start.String = 'Test';
+            h.compete.String = 'Competition';
+        end
+        
+        % Reset if competing for the first time after test
+        if ~h.props.competing && h.props.running && compete
+            sdfunc.reset(h);
+            seed = mod(idivide(int64(round(now*100000)), int64(60), 'floor'), 10000);
+            % Changes once per minute            
+            rng(seed);
+            h.text_seed.String = sprintf('Random seed: %d', seed);
+        end
+        
+        if ~compete && h.props.running
+            seed = mod(round(now*1000000), 10000);
+            rng(seed);
+            h.text_seed.String = sprintf('Random seed: %d', seed);
+        end                        
+        
+        h.props.competing = compete;
+
+        while h.props.running
+            done = sdfunc.looper(h);
+            
+            if done && h.props.competing
+                sdfunc.enable_all(h, true);
+                msgbox({sprintf('Final score: %d points', h.props.sau.score), ...
+                        sprintf('Time survived: %.2f seconds', ...
+                            h.props.sau.iterations * h.props.sau.T)});
+                break
+            end
+        end
+    end
+
     function [C, G] = gui_LTI_config(h)
         C = h.props.widget_controller.get_tf();
         G = h.props.widget_plant.get_tf();
@@ -121,7 +202,7 @@ methods(Static)
     
     function update_difficulty_panel(h)
         h.panel_difficulty.Title = ...
-            sprintf('Difficulty: %5.3f', h.sau.difficulty);
+            sprintf('Difficulty: %5.3f', h.props.sau.difficulty);
     end
 
     function update_texts(h, sau)
@@ -141,8 +222,8 @@ methods(Static)
             h.cooldown.ForegroundColor = [0 0 0];
         end
 
-        h.hits.String = ...
-            sprintf('Hits: %d', sau.hits);
+        h.hits.String  = sprintf('Hits: %d', sau.hits);
+        h.score.String = sprintf('Score: %d', sau.score);
 
         h.accel.String = ...
             sprintf('Acceleration: %5.3f', sau.gun.get_a());
@@ -196,7 +277,7 @@ methods(Static)
     end
     
     function update_siso_plot(handles)               
-        sau   = handles.sau;
+        sau   = handles.props.sau;
         axe   = handles.siso;
         
         if numel(sau.hist_r) > 1
@@ -241,7 +322,7 @@ methods(Static)
 
         [C, G] = sdfunc.gui_LTI_config(h);
 
-        h.sau.update_LTI(h.props.tff, C, G);
+        h.props.sau.update_LTI(h.props.tff, C, G);
         
         % TODO: obtain C, G, from sau as it is being used (if discretized)
 

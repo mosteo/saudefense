@@ -22,7 +22,7 @@ function varargout = sdgui(varargin)
 
 % Edit the above text to modify the response to help sdgui
 
-% Last Modified by GUIDE v2.5 03-Jan-2019 19:38:31
+% Last Modified by GUIDE v2.5 04-Jan-2019 18:16:14
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -121,17 +121,7 @@ function start_Callback(hObject, eventdata, handles)
 % hObject    handle to start (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
-if handles.props.running
-    handles.props.running = false;
-    handles.start.String = 'GO!';
-else
-    handles.props.running = true;
-    handles.start.String = 'Pause';
-    
-    while handles.props.running
-        sdfunc.looper(handles);
-    end
-end
+sdfunc.start_stop(handles, false)
 
 
 % --- Executes on button press in autoaim.
@@ -335,3 +325,32 @@ function pop_plant_CreateFcn(hObject, eventdata, handles)
 if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
     set(hObject,'BackgroundColor','white');
 end
+
+% --- Executes on button press in competition.
+function competition_Callback(hObject, eventdata, handles)
+% hObject    handle to competition (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hint: get(hObject,'Value') returns toggle state of competition
+
+
+% --- Executes on button press in compete.
+function compete_Callback(hObject, eventdata, handles)
+% hObject    handle to compete (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+sdfunc.start_stop(handles, true)
+
+
+% --- Executes on button press in pb_help.
+function pb_help_Callback(hObject, eventdata, handles)
+% hObject    handle to pb_help (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+opts.Interpreter = 'none';
+opts.WindowStyle = 'modal';
+msgbox({'When running in Competition Mode the following changes apply:', ...
+    '- The game will end after a hit without shields.', ...
+    '- Changes applied during execution will not have effect.'}, ...
+    'Value', opts);

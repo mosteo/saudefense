@@ -132,6 +132,10 @@ methods(Access=public)
         end
     end
     
+    function points = score(this)
+        points = this.kind;
+    end
+    
     function done = update(this)
         this.x  = this.x + this.vx*this.T;        
         if abs(this.x) > saudefense.W/2

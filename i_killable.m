@@ -10,6 +10,9 @@ methods(Abstract)
     
     % TODO: migrate to polyshapes when R2017b+
     
+    points = score(this)
+    % How much for killing it now
+    
 end
 
 end

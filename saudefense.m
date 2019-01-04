@@ -19,6 +19,7 @@ properties
     % Timing
     T       = 1/20  % period
     start           % of each cycle (for load computation)
+    iterations = 0  % To keep track of total time ran
     
     load    = zeros(1, 10)  % CPU use in %1
     load_len= 10      % Samples to avg        
@@ -38,6 +39,7 @@ properties
     
     hits  = 0 % Foes destroyed   
     lives = saudefense.initial_lives;    
+    score = 0 % Points
     
     foes = {}
     
@@ -129,22 +131,6 @@ methods(Static)
     
 end
 
-methods(Access=private)
-    
-    function axis = select_world(~)
-        axis = subplot(2, 2, [1 3]);
-    end
-    
-    function axis = select_history(~)
-        axis = subplot(2, 2, 2);
-    end
-    
-    function axis = select_analysis(~)
-        axis = subplot(2, 2, 4);
-    end        
-    
-end
-
 methods(Access=public)
     
     function this = saudefense(battle_handle, loop)                     
@@ -171,7 +157,7 @@ methods(Access=public)
         end
         
         this.draw_init();
-    end
+    end   
     
     function compute(this)
         
@@ -216,7 +202,10 @@ methods(Access=public)
     
     function foeing(this)
         % Generate?
-        if rand < poisspdf(1, (this.foe_lambda + this.difficulty/2)*this.T)
+        max_foes = 1 + ceil(this.difficulty * 8);
+        
+        if numel(this.foes) < max_foes && ...
+           rand < poisspdf(1, (this.foe_lambda + this.difficulty/2)*this.T)
             this.foes{end+1} = foe(this.T, 2-(rand>this.difficulty*0.9), this.difficulty);
         end
         
@@ -237,6 +226,11 @@ methods(Access=public)
             
             this.lives = this.lives - hit_me;
             this.hits  = this.hits  + hit_it;
+            
+            % scoring
+            if hit_it
+                this.score = this.score + this.foes{i}.score;
+            end
             
             % adjust target if going away
             if done || hit_it
@@ -281,10 +275,10 @@ methods(Access=public)
                 if this.foes{i}.y > this.H - this.foes{i}.size; continue; end
                 % Barely visible, do not consider yet
 
-                score = norm([this.gun.x - this.foes{i}.x; this.foes{i}.y]);
+                dist = norm([this.gun.x - this.foes{i}.x; this.foes{i}.y]);
 
-                if score < best
-                    best = score;
+                if dist < best
+                    best = dist;
                     this.target = i;
                 end
             end
@@ -399,6 +393,8 @@ methods(Access=public)
     function done = iterate(this)
         done = this.lives < 0;
         
+        this.iterations = this.iterations + 1;
+        
         % Compute
         this.compute;
 
@@ -448,8 +444,8 @@ methods(Access=public)
     % Update things on the fly... yikes!
     % For changes in PID parameters, T, ...
     % Receives ideal s-tf Controller and Plant
-        disp('Controller: '); C
-        disp('Plant: ');      G
+        disp('Controller: '); display(C);
+        disp('Plant: ');      display(G);
         this.loop = loop_single(tff, this.T, C*G, 1); 
         this.gun.loop = this.loop;
         this.gun.x = 0;

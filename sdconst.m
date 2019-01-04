@@ -1,19 +1,19 @@
 classdef sdconst < handle
     
-    properties(Constant)                
-        
-    end
-    
-    methods(Access=public)
-        
-        function str = onoff(bool)
-            if bool
-                str = 'ON';
-            else
-                str = 'off';
-            end
+properties(Constant)                
+    default_period = 0.05
+end
+
+methods(Static)
+
+    function str = onoff(bool)
+        if bool
+            str = 'on';
+        else
+            str = 'off';
         end
-        
     end
+
+end
     
 end
