@@ -198,7 +198,10 @@ methods(Access=public)
         if this.gun.exploding <= 0
             this.lives = this.lives - 1;
             this.gun.die();
-            this.gun.x = this.W/2*sign(this.gun.x);
+            
+            if abs(this.gun.x) > this.W/2
+                this.gun.x = this.W/2*sign(this.gun.x);
+            end
 
             % And debris
             this.debrises = [this.debrises ...
