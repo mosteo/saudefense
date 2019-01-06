@@ -100,6 +100,9 @@ methods(Static)
                 handles.props.widget_plant = panel_motor_1st();
             case 3
                 handles.props.widget_plant = panel_motor_2nd();
+            case 4
+                handles.props.widget_plant = panel_motor_2nd_zpk();
+
             otherwise
                 error('Unknown plant: %s', handles.pop_plant.Value)
         end
