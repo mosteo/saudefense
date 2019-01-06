@@ -42,7 +42,7 @@ methods
                 'Units', 'normalized', 'Position', [0, hei*1, 0.5, hei]);
         end
         uicontrol('Parent', panel, 'Style', 'text','String', {'',this.label_footer}, ...
-            'Units', 'normalized', 'Position', [0, hei*0, 1, hei]);
+            'Units', 'normalized', 'Position', [0, hei*0, 1, hei*1.1]);
         
         if this.visible_rows >= 1
             this.edit_A = uicontrol('Parent', panel, 'Style', 'edit','String',this.init_A, ...
