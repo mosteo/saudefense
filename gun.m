@@ -16,6 +16,7 @@ properties(Constant)
     
     v_arm   = 10  % max speed allowing fire
     a_arm   =  2  % max accel allowing fire
+    a_break = 5000 % max accel allowed
     
     firing_len   = 0.5  % time a firing lasts   
     cooldown_len = 1    % time until next shot ready       

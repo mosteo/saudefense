@@ -230,28 +230,29 @@ methods(Static)
 
         h.hits.String  = sprintf('Hits: %d', sau.hits);
         h.score.String = sprintf('Score: %d', sau.score);
+        h.alive.String = sprintf('Alive: %.2f"', sau.iterations*sau.T);
 
         h.accel.String = ...
             sprintf('Acceleration: %5.3f', sau.gun.get_a());
-        if abs(sau.gun.get_a()) > sau.gun.a_arm
+        
+        if abs(sau.gun.get_a()) > sau.gun.a_break
             h.accel.ForegroundColor = [1 0 0];
+        elseif abs(sau.gun.get_a()) > sau.gun.a_arm
+            h.accel.ForegroundColor = [1 0.5 0];
         else
             h.accel.ForegroundColor = [0 0 0];
         end
     end
     
-    function update_error_plot(axe, C, G)
+    function update_error_plot(axe, C, G, tplot)
         axes(axe);
-        cla(axe);
-        hold(axe, 'on');
         
         s=tf('s');
  
-        % step error response
-        step(axe, feedback(1, C*G), 'b');
-        
-        % ramp error response
-        step(axe, 1/s/(1 + C*G), 'r');
+        % error responses
+        step(axe, feedback(1, C*G), 'b', ...    % step
+                  1/s/(1 + C*G), 'r', ...       % ramp
+                  tplot);
             
         %title('Manual response')
         
@@ -263,16 +264,13 @@ methods(Static)
         %drawnow
     end    
     
-    function update_response_plot(axe, C, G)        
+    function update_response_plot(axe, C, G, tplot)        
         axes(axe);
-        cla(axe);
-        hold(axe, 'on');   
-        
-        % motor position response
-        step(axe, feedback(G, 1), 'r');
-        
-        % controlled position response
-        step(axe, feedback(C*G, 1), 'b');
+                
+        step(axe, feedback(G, 1), 'r', ...      % uncompensated
+                  feedback(C*G, 1), 'b', ...    % compensated
+                  tplot);
+
         axis auto
         
         legend(axe, 'uncompensated', 'compensated', 'Location', 'southwest');
@@ -299,7 +297,7 @@ methods(Static)
         % %drawnow
     end    
     
-    function update_rlocus(axe, C, G)
+    function update_rlocus(axe, C, G, info)
         axes(axe);
         cla(axe);
         hold(axe, 'on');
@@ -311,7 +309,17 @@ methods(Static)
         rlocus(axe, C*G, 'b');
 
         % closed-loop poles:
-        rlocus(axe, feedback(C*G, 1), 'r', 0);
+        poles = pole(feedback(C*G, 1)) + 0.000001i;
+        plot(axe, poles, 'rx'); % maybe faster
+        %rlocus(axe, feedback(C*G, 1), 'r', 0);
+        
+        % Try to adjust around response time
+%         if ~isnan(info.SettlingTime)
+%             ranges    = axis(axe);
+%             ranges(1) = -ceil(4/info.SettlingTime)*1.1;
+%             ranges(2) = abs(ceil(max(real(poles))))*1.1;
+%             axis(axe, ranges);
+%         end
         
         h = zeros(2, 1);
         h(1) = plot(NaN,NaN,'xb');
@@ -329,18 +337,29 @@ methods(Static)
         
         h.props.competing = false; % Since we just messed settings up...
         
+        h.updating.String = 'Updating.';
         h.updating.Visible = 'on';
         drawnow
 
         [C, G] = sdfunc.gui_LTI_config(h);
+        
+        info = stepinfo(feedback(C*G, 1));
+        if ~isnan(info.SettlingTime) % < sdconst.max_plot_ts            
+            tplot=0:h.props.sau.T:ceil(info.SettlingTime+2);
+            %tplot=0:0.5:ceil(info.SettlingTime+2);
+        else
+            tplot=0:h.props.sau.T:sdconst.max_plot_ts;                 
+        end
 
         h.props.sau.update_LTI(h.props.tff, C, G);
 
         % TODO: obtain C, G, from sau as it is being used (if discretized)
 
-        sdfunc.update_response_plot(h.response, C, G);
-        sdfunc.update_error_plot(h.error, C, G);
-        sdfunc.update_rlocus(h.rlocus, C, G);
+        sdfunc.update_response_plot(h.response, C, G, tplot);
+        h.updating.String = 'Updating..';
+        sdfunc.update_error_plot(h.error, C, G, tplot);
+        h.updating.String = 'Updating...';
+        sdfunc.update_rlocus(h.rlocus, C, G, info);
 
         h.updating.Visible = 'off';
         drawnow

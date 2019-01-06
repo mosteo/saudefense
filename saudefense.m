@@ -61,6 +61,7 @@ properties
     U_auto
     
     % History
+    ax_max_seen = 0;
     max_hist_time = 10 % Seconds of history to keep
     hist_r = []
     hist_y = []
@@ -221,6 +222,8 @@ methods(Access=public)
         
         this.gun.update(this.T);
         
+        this.ax_max_seen = max(this.ax_max_seen, abs(this.gun.get_a()));
+        
         % Check collision
         if abs(this.gun.x) > this.W/2
             this.die();
@@ -241,7 +244,9 @@ methods(Access=public)
         
         if numel(this.foes) < max_foes && ...
            rand < poisspdf(1, (this.foe_lambda + this.difficulty/2)*this.T)
-            this.foes{end+1} = foe(this.T, 2-(rand>this.difficulty*0.9), this.difficulty);
+            this.foes{end+1} = foe(this.T, ...
+                2-(rand>this.difficulty*0.99), ...
+                this.difficulty);
         end
         
         % Move 
