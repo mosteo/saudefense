@@ -102,7 +102,7 @@ function window_KeyPressFcn(~, eventdata, handles)
 %	Character: character interpretation of the key(s) that was pressed
 %	Modifier: name(s) of the modifier key(s) (i.e., control, shift) pressed
 % handles    structure with handles and user data (see GUIDATA)
-%handles.props.sau.keyPress(eventdata);
+% handles.props.sau.keyPress(eventdata);
 
 
 % --- Executes on key release with focus on window and none of its controls.
@@ -113,7 +113,7 @@ function window_KeyReleaseFcn(~, eventdata, handles)
 %	Character: character interpretation of the key(s) that was released
 %	Modifier: name(s) of the modifier key(s) (i.e., control, shift) released
 % handles    structure with handles and user data (see GUIDATA)
-%handles.props.sau.keyRelease(eventdata);
+% handles.props.sau.keyRelease(eventdata);
 
 
 % --- Executes on button press in start.

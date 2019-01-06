@@ -247,15 +247,15 @@ methods(Static)
         end
     end
     
-    function update_error_plot(axe, C, G, tplot)
+    function update_error_plot(axe, C, G, tend)
         axes(axe);
         
         s=tf('s');
  
         % error responses
-        step(axe, feedback(1, C*G), 'b', ...    % step
-                  1/s/(1 + C*G), 'r', ...       % ramp
-                  tplot);
+        [y1,t1] = step(feedback(1, C*G), tend);
+        [y2,t2] = step(1/s/(1 + C*G), tend);
+        plot(axe, t1, y1, 'b', t2, y2, 'r');
             
         %title('Manual response')
         
@@ -267,16 +267,24 @@ methods(Static)
         %drawnow
     end    
     
-    function update_response_plot(axe, C, G, tplot)        
+    function update_response_plot(axe, C, G, tend)        
         axes(axe);
-                
-        step(axe, feedback(G, 1), 'r', ...      % uncompensated
-                  feedback(C*G, 1), 'b', ...    % compensated
-                  tplot);
-
-        axis auto
+        cla(axe);
+        hold(axe, 'on');
         
-        legend(axe, 'uncompensated', 'compensated', 'Location', 'southwest');
+        % Use compensated as axis for when uncompensated is unstable
+        [y2,t2] = step(feedback(C*G, 1), tend);
+        plot(axe, t2, y2, 'b');
+        ax = axis(axe);
+        
+        [y1,t1] = step(feedback(G, 1), tend);
+        plot(axe, t1, y1, 'r');
+        axis(axe, ax);
+        
+%         step(axe, feedback(G, 1), tplot, 'r');   % uncompensated         
+%         step(axe, feedback(C*G, 1), tplot, 'b'); % compensated
+        
+        legend(axe, 'compensated', 'uncompensated', 'Location', 'southwest');
         
         title(axe, '');
         ylabel(axe, '');     
@@ -348,19 +356,19 @@ methods(Static)
         
         info = stepinfo(feedback(C*G, 1));
         if ~isnan(info.SettlingTime) % < sdconst.max_plot_ts            
-            tplot=0:h.props.sau.T:ceil(info.SettlingTime+2);
+            tend = ceil(info.SettlingTime+2);
             %tplot=0:0.5:ceil(info.SettlingTime+2);
         else
-            tplot=0:h.props.sau.T:sdconst.max_plot_ts;                 
+            tend = sdconst.max_plot_ts;                 
         end
 
         h.props.sau.update_LTI(h.props.tff, C, G);
 
         % TODO: obtain C, G, from sau as it is being used (if discretized)
 
-        sdfunc.update_response_plot(h.response, C, G, tplot);
+        sdfunc.update_response_plot(h.response, C, G, tend);
         h.updating.String = 'Updating..';
-        sdfunc.update_error_plot(h.error, C, G, tplot);
+        sdfunc.update_error_plot(h.error, C, G, tend);
         h.updating.String = 'Updating...';
         sdfunc.update_rlocus(h.rlocus, C, G, info);
 
