@@ -5,7 +5,7 @@ properties
     
     label_A = 'μ'
     label_B = 'ζωₙ'
-    label_C = 'K'
+    label_C = 'ωₙ'
     label_footer = 'μωₙ²/(s(s²+2ζωₙs+ωₙ²))'
     
     init_A = '1'

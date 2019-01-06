@@ -3,8 +3,14 @@ classdef gun < i_body & i_drawable & i_loop & i_killer
 % This way we make the gun reusable for different loop implementations.
     
 properties(Constant)
-    txt_armed={'disarmed', 'armed', 'cooling down', 'firing'}
-    mark_armed={'o','^', 'v', '^'}
+    txt_armed={'disarmed', 'armed', 'cooling down', 'firing', 'destroyed'}
+    mark_armed={'o','^', 'v', '^', 'x'}
+    
+    DISARMED=1
+    ARMED=2
+    COOLING=3
+    FIRING=4
+    DESTROYED=5
     
     size = 12;
     
@@ -12,7 +18,8 @@ properties(Constant)
     a_arm   =  2  % max accel allowing fire
     
     firing_len   = 0.5  % time a firing lasts   
-    cooldown_len = 1    % time until next shot ready        
+    cooldown_len = 1    % time until next shot ready       
+    wave_len     = 1    % time exploding
 end
     
 properties
@@ -20,17 +27,22 @@ properties
     
     firing   = 0;
     cooldown = 0;
+    exploding = 0;
     armed    = true;         
     autofire = true;
     
     G, H
     
-    gun_ready = 2;   % (disarmed, armed, cooling, firing) (positive)
+    state = 2;   % (disarmed, armed, cooling, firing) (positive)
     
     target   = []    % An instance of i_killable
     
     h_gun   % Drawers 
     h_ray
+    h_wave
+    
+    x_wave
+    y_wave % For explosion
 end
     
 methods
@@ -46,30 +58,53 @@ methods
         
         this.h_gun = drawer();
         this.h_ray = drawer();
+        this.h_wave = drawer();
+        
+        a=0:pi/16:pi;
+        this.x_wave=cos(a)';
+        this.y_wave=sin(a)';
     end
     
     function die(this)
         % When hit, do a rising waveshock and suspend normal actions
+        this.exploding = this.wave_len;
+        this.firing    = 0;
+        this.cooldown  = 0;
     end
    
     function draw(this, axis, scale)
         % Gun status
-        if this.firing > 0
-            gs = 4;
+        if this.exploding > 0
+            gs = this.DESTROYED;
+        elseif this.firing > 0
+            gs = this.FIRING;
         elseif this.cooldown > 0
-            gs = 3;
+            gs = this.COOLING;
         elseif this.armed
-            gs = 2;
+            gs = this.ARMED;
         else
-            gs = 1;
+            gs = this.DISARMED;
         end
         
-        this.gun_ready = gs;
+        this.state = gs;
         
+        if this.state == this.DESTROYED
+            % Draw shockwave
+            r = this.radius();
+            this.h_wave.plot(axis, ...
+                (this.x + this.x_wave.*r)*scale, ...
+                (this.y + this.y_wave.*r)*scale, ...
+                'Color', [0 1 0]);
+            this.h_wave.show();
+        else
+            this.h_wave.show(false);
+        end        
+            
+        % Draw gun
         this.h_gun.plot(axis, ...
             this.x*scale, 0, 'Marker', this.mark_armed{gs}, ...
             'MarkerSize', this.size, 'Color', [0 0 0.7]);
-        
+        this.h_gun.show;
         
         if (this.firing > 0)
             rayX = [this.x this.x]*scale;
@@ -83,6 +118,10 @@ methods
     end
     
     function fire(this)
+        if this.exploding > 0
+            return
+        end
+        
         % Cooldown
         if this.cooldown > 0
             this.cooldown = this.cooldown - this.loop.period;
@@ -111,14 +150,18 @@ methods
         
         % Autofire (once armed is computed)
         if this.autofire && this.armed && this.has_target() && ...
-                this.target.check_hit(this.x, this.y, pi/2, false)
+                this.target.check_hit(this.x, this.y, pi/2)
             this.firing = this.firing_len;
             this.armed  = false;
         end 
     end
     
+    function r = radius(this)
+        r = saudefense.H/2*(1-this.exploding/this.wave_len);
+    end
+    
     function txt = get_ready_txt(this)
-        txt = this.txt_armed{this.gun_ready};
+        txt = this.txt_armed{this.state};
     end
     
     function a = get_a(this)
@@ -156,16 +199,25 @@ methods
     end
     
     function reset_state(this)
-        this.loop.reset_state();        
+        this.loop.reset_state();   
+        this.x = 0;
     end
     
-    function done = update(this, ~)
-        done = false;                
+    function done = update(this, period)
+        done = false;            
         
-        if this.has_target()
-            this.x = this.output(this.target.x);
-        else
-            this.x = this.output(this.x);
+        if this.exploding > 0
+            this.exploding = this.exploding - period;
+            if this.exploding <= 0
+                this.exploding = 0;
+                this.reset_state();
+            end
+        else        
+            if this.has_target()
+                this.x = this.output(this.target.x);
+            else
+                this.x = this.output(this.x);
+            end
         end
     end
     

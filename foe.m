@@ -98,20 +98,19 @@ methods(Access=public)
         
     end
     
-    function hit = check_hit(this, fx, ~, ~, real)
-        % Firing angle not used right now (vertical fire assumed)
-        
+    function hit = check_hit(this, fx, ~, ~)
+        % Firing angle not used right now (vertical fire assumed)        
         hit = this.alive && abs(this.x - fx)<=this.size/2;
-        
-        if hit && real
-            fprintf('Destroyed!\n');
-            this.alive = false;
-            this.dying = this.dying_len;
-            this.vy = this.vy / 2;
-            this.vx = this.vx / 2;
-            % fix Y offset
-            this.y = this.y + this.size*1/2;
-        end
+    end
+    
+    function die(this)
+        fprintf('Destroyed!\n');
+        this.alive = false;
+        this.dying = this.dying_len;
+        this.vy = this.vy / 2;
+        this.vx = this.vx / 2;
+        % fix Y offset
+        this.y = this.y + this.size*1/2;
     end
     
     function draw(this, fig, scale)     

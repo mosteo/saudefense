@@ -194,15 +194,18 @@ methods(Access=public)
         end
     end
     
-    function die(this)        
-        this.lives = this.lives - 1;
-        this.gun.die();
-        
-        % And debris
-        this.debrises = [this.debrises ...
-            debris.create(this.fragments, ...
-                          min(this.W/2, abs(this.gun.x))*sign(this.gun.x), ...
-                          0.001)];
+    function die(this)      
+        if this.gun.exploding <= 0
+            this.lives = this.lives - 1;
+            this.gun.die();
+            this.gun.x = this.W/2*sign(this.gun.x);
+
+            % And debris
+            this.debrises = [this.debrises ...
+                debris.create(this.fragments, ...
+                              min(this.W/2, abs(this.gun.x))*sign(this.gun.x), ...
+                              0.001)];
+        end
     end
     
     function dynamics(this)        
@@ -250,18 +253,24 @@ methods(Access=public)
                 this.die();
             end
             
-            % Hit by us?
-            if this.gun.firing > 0 
-                hit_it = this.foes{i}.check_hit(this.gun.x, this.gun.y, pi/2, true);
+            % Hit by us?  
+            if this.foes{i}.alive
+                if this.gun.exploding > 0
+                    hit_it = norm([this.gun.x - this.foes{i}.x; ...
+                                   this.gun.y - this.foes{i}.y]) <= this.gun.radius();               
+                elseif this.gun.firing > 0 
+                    hit_it = this.foes{i}.check_hit(this.gun.x, this.gun.y, pi/2);
+                    this.hits  = this.hits + 1;
+                    this.score = this.score + this.foes{i}.score;
+                else
+                    hit_it = false;
+                end                       
+            
+                if hit_it
+                   this.foes{i}.die();
+                end
             else
                 hit_it = false;
-            end
-                       
-            this.hits  = this.hits  + hit_it;
-            
-            % scoring
-            if hit_it
-                this.score = this.score + this.foes{i}.score;
             end
             
             % adjust target if going away
@@ -297,7 +306,9 @@ methods(Access=public)
         end
         
         % Targeting        
-        if this.man_target > 0 
+        if this.gun.exploding > 0
+            this.target = 0;
+        elseif this.man_target > 0 
             this.target = this.man_target;
         else
             best = Inf;
@@ -442,7 +453,7 @@ methods(Access=public)
     end
     
     function done = iterate(this)
-        done = this.lives < 0;
+        done = (this.lives < 0) && (this.gun.exploding <= 2*this.T);
         
         this.iterations = this.iterations + 1;
         

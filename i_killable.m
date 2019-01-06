@@ -4,9 +4,11 @@ classdef(Abstract) i_killable < handle
     
 methods(Abstract)
     
-    hit = check_hit(this, fx, fy, fa, real)
+    hit = check_hit(this, fx, fy, fa)
     % Check if hit by a laser fired at fx, fy, with angle fa   
-    % If real, the hit is real, else is a test only
+    
+    die(this)
+    % Actually die
     
     % TODO: migrate to polyshapes when R2017b+
     

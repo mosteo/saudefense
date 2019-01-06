@@ -9,6 +9,9 @@ methods(Static)
     end
 
     function h = init(handles)        
+        
+        'QUITAR POISSONPDF'
+        
         handles.initializing.Position = [0 0 1 1];
         %drawnow
 
@@ -163,6 +166,7 @@ methods(Static)
         else
             h.start.String = 'Test';
             h.compete.String = 'Competition';
+            sdfunc.enable_all(h, true);
         end
         
         % Reset if competing for the first time after test
@@ -189,7 +193,9 @@ methods(Static)
                 sdfunc.enable_all(h, true);
                 msgbox({sprintf('Final score: %d points', h.props.sau.score), ...
                         sprintf('Time survived: %.2f seconds', ...
-                            h.props.sau.iterations * h.props.sau.T)});
+                            h.props.sau.iterations * h.props.sau.T)});                
+                sdfunc.start_stop(h, true);
+                h.props.competing = false;
                 break
             end
         end
@@ -317,13 +323,19 @@ methods(Static)
     end
     
     function update_LTI(h)        
+        sdfunc.enable_all(h, false);
+        h.start.Enable = 'off';
+        h.compete.Enable = 'off';
+        
+        h.props.competing = false; % Since we just messed settings up...
+        
         h.updating.Visible = 'on';
         drawnow
 
         [C, G] = sdfunc.gui_LTI_config(h);
 
         h.props.sau.update_LTI(h.props.tff, C, G);
-        
+
         % TODO: obtain C, G, from sau as it is being used (if discretized)
 
         sdfunc.update_response_plot(h.response, C, G);
@@ -332,6 +344,9 @@ methods(Static)
 
         h.updating.Visible = 'off';
         drawnow
+        sdfunc.enable_all(h, ~h.props.competing);
+        h.start.Enable   = sdconst.onoff(~h.props.running || ~h.props.competing);
+        h.compete.Enable = sdconst.onoff(~h.props.running || h.props.competing);
     end
 
 end

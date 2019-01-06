@@ -102,7 +102,7 @@ function window_KeyPressFcn(~, eventdata, handles)
 %	Character: character interpretation of the key(s) that was pressed
 %	Modifier: name(s) of the modifier key(s) (i.e., control, shift) pressed
 % handles    structure with handles and user data (see GUIDATA)
-handles.sau.keyPress(eventdata);
+handles.props.sau.keyPress(eventdata);
 
 
 % --- Executes on key release with focus on window and none of its controls.
@@ -113,7 +113,7 @@ function window_KeyReleaseFcn(~, eventdata, handles)
 %	Character: character interpretation of the key(s) that was released
 %	Modifier: name(s) of the modifier key(s) (i.e., control, shift) released
 % handles    structure with handles and user data (see GUIDATA)
-handles.sau.keyRelease(eventdata);
+handles.props.sau.keyRelease(eventdata);
 
 
 % --- Executes on button press in start.
@@ -129,7 +129,7 @@ function autoaim_Callback(hObject, eventdata, handles)
 % hObject    handle to autoaim (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
-handles.sau.auto_aim = hObject.Value ~= 0;
+handles.props.sau.auto_aim = hObject.Value ~= 0;
 
 
 % --- Executes on button press in autofire.
@@ -137,19 +137,19 @@ function autofire_Callback(hObject, eventdata, handles)
 % hObject    handle to autofire (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
-handles.sau.gun.autofire = hObject.Value ~= 0;
+handles.props.sau.gun.autofire = hObject.Value ~= 0;
 
 
 function period_Callback(hObject, eventdata, handles)
 % hObject    handle to period (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
-handles.sau.T = str2double(hObject.String);
-if handles.sau.T < 0.001 
-    handles.sau.T = 0.001;
+handles.props.sau.T = str2double(hObject.String);
+if handles.props.sau.T < 0.001 
+    handles.props.sau.T = 0.001;
     handles.period.String= '0.001';
 end
-handles.looper.Period = handles.sau.T;
+handles.looper.Period = handles.props.sau.T;
 
 sdfunc.update_LTI(handles);
 
@@ -234,6 +234,7 @@ function difficulty_Callback(hObject, eventdata, handles)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 handles.props.sau.difficulty = hObject.Value;
+handles.props.competing = false;
 sdfunc.update_difficulty_panel(handles);
 
 % --- Executes during object creation, after setting all properties.
@@ -273,8 +274,8 @@ function do_siso_Callback(hObject, eventdata, handles)
 % hObject    handle to do_siso (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
-handles.sau.plot_hist = hObject.Value;
-handles.sau.draw_fix_axis;
+handles.props.sau.plot_hist = hObject.Value;
+handles.props.sau.draw_fix_axis;
 
 
 % --- Executes on selection change in pop_controller.
