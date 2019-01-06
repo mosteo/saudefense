@@ -233,8 +233,7 @@ function difficulty_Callback(hObject, eventdata, handles)
 % hObject    handle to difficulty (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
-handles.props.diff_changed = true;
-handles.props.difficulty   = hObject.Value;
+handles.props.sau.difficulty = hObject.Value;
 sdfunc.update_difficulty_panel(handles);
 
 % --- Executes during object creation, after setting all properties.

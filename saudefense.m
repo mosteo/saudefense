@@ -5,6 +5,9 @@ properties(Constant)
     W       = 90    % world width
     H       = 160   % world height
     Vr_max  = 5    
+    OS      = 0.2   % Overshoot for lateral bands
+    
+    fragments = 8   % debris from gun
     
     foe_lambda = 1/4 % Incomings per second (lambda for poisson)
     % initial rate, that increases with difficulty
@@ -42,6 +45,8 @@ properties
     score = 0 % Points
     
     foes = {}
+    
+    debrises = {} % list with debrises
     
     gun         % see gun.m class
     
@@ -169,7 +174,7 @@ methods(Access=public)
         
         this.fire();
                 
-        this.dynamics();        
+        this.dynamics();          
         
         % HISTORY
         samples = floor(this.max_hist_time / this.T);
@@ -189,6 +194,17 @@ methods(Access=public)
         end
     end
     
+    function die(this)        
+        this.lives = this.lives - 1;
+        this.gun.die();
+        
+        % And debris
+        this.debrises = [this.debrises ...
+            debris.create(this.fragments, ...
+                          min(this.W/2, abs(this.gun.x))*sign(this.gun.x), ...
+                          0.001)];
+    end
+    
     function dynamics(this)        
         % Control input
         if this.auto_aim && this.target > 0 && this.gun.firing <= 0
@@ -197,7 +213,20 @@ methods(Access=public)
             this.gun.set_target([]);                        
         end 
         
-        this.gun.update();
+        this.gun.update(this.T);
+        
+        % Check collision
+        if abs(this.gun.x) > this.W/2
+            this.die();
+        end
+        
+        % Move debris
+        for i=numel(this.debrises):-1:1
+            done = this.debrises{i}.update(this.T);
+            if done
+                this.debrises(i) = [];
+            end
+        end
     end
     
     function foeing(this)
@@ -212,10 +241,14 @@ methods(Access=public)
         % Move 
         i = 1;        
         while i <= numel(this.foes)
-            done = this.foes{i}.update();
+            done = this.foes{i}.update(this.T);
             
             % Gun hit?
-            hit_me = this.foes{i}.alive && (this.foes{i}.y <= 0);                
+            hit_me = this.foes{i}.alive && (this.foes{i}.y <= 0);  
+            
+            if hit_me
+                this.die();
+            end
             
             % Hit by us?
             if this.gun.firing > 0 
@@ -223,8 +256,7 @@ methods(Access=public)
             else
                 hit_it = false;
             end
-            
-            this.lives = this.lives - hit_me;
+                       
             this.hits  = this.hits  + hit_it;
             
             % scoring
@@ -255,6 +287,7 @@ methods(Access=public)
         this.man_target = 0;        
         for i = 1:numel(this.foes)
             if ~this.foes{i}.alive; continue; end % disintegrating
+            if abs(this.foes{i}.x) > this.W/2*(1-this.OS); continue; end % Can't target yet
             d = norm([mouse(1,1) - this.foes{i}.x; ...
                       mouse(1,2) - this.foes{i}.y]);
             if d < this.foe_manual_dist && d < cl_dist
@@ -274,6 +307,9 @@ methods(Access=public)
 
                 if this.foes{i}.y > this.H - this.foes{i}.size; continue; end
                 % Barely visible, do not consider yet
+                
+                if abs(this.foes{i}.x) > this.W/2*(1-this.OS); continue; end 
+                % Can't target yet because of overshoot
 
                 dist = norm([this.gun.x - this.foes{i}.x; this.foes{i}.y]);
 
@@ -300,9 +336,19 @@ methods(Access=public)
         
         this.draw_fix_axis();
         
+        % OS bands
         fill(this.fig, ...
-            [-this.W/2; this.W/2; this.W/2; -this.W/2]*this.scale, ...
+            [-this.W/2; this.W/2; ...
+              this.W/2; -this.W/2]*this.scale, ...
+        [0; 0; this.H; this.H], [0.9 0.9 0.9]);
+        
+        % Background
+        fill(this.fig, ...
+            [-this.W/2*(1-this.OS); this.W/2*(1-this.OS); ...
+             this.W/2*(1-this.OS); -this.W/2*(1-this.OS)]*this.scale, ...
             [0; 0; this.H; this.H], 'w');
+        
+        % Frame
         boxX = [-this.W/2 this.W/2 this.W/2 -this.W/2 -this.W/2]'.*this.scale;
         boxY = [0 0 this.H this.H 0]'.*this.scale;
         this.frame.plot(this.fig, boxX, boxY, 'Color', [0, 0, 0]);       
@@ -330,7 +376,7 @@ methods(Access=public)
         
         % Foes
         for i = 1:numel(this.foes)
-            this.foes{i}.draw(this.fig)
+            this.foes{i}.draw(this.fig, this.scale)
         end
         
         % Reticle
@@ -360,6 +406,11 @@ methods(Access=public)
         end
 
         this.gun.draw(this.fig, this.scale); 
+        
+        % debris
+        for i=1:numel(this.debrises)
+            this.debrises{i}.draw(this.fig, this.scale);
+        end
         
         % History
         if this.plot_hist && numel(this.hist_r)>1

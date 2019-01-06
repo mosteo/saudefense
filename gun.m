@@ -47,6 +47,10 @@ methods
         this.h_gun = drawer();
         this.h_ray = drawer();
     end
+    
+    function die(this)
+        % When hit, do a rising waveshock and suspend normal actions
+    end
    
     function draw(this, axis, scale)
         % Gun status
@@ -155,7 +159,7 @@ methods
         this.loop.reset_state();        
     end
     
-    function done = update(this)
+    function done = update(this, ~)
         done = false;                
         
         if this.has_target()

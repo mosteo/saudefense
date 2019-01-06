@@ -64,7 +64,7 @@ methods(Access=public)
         switch kind 
             case this.BOMB
                 fprintf('Incoming bomb!\n')
-                this.x = rand*saudefense.W-saudefense.W/2;
+                this.x = (rand*saudefense.W-saudefense.W/2)*(1 - saudefense.OS);
                 this.y = saudefense.H;
                 this.vy = 0;
                 this.vx = 0;
@@ -114,20 +114,20 @@ methods(Access=public)
         end
     end
     
-    function draw(this, fig)     
+    function draw(this, fig, scale)     
         if this.alive     
-            this.h_fill.fill(fig, (this.spriteX + this.x)*saudefense.scale, ...
-                  (this.spriteY + this.y)*saudefense.scale, ...
+            this.h_fill.fill(fig, (this.spriteX + this.x)*scale, ...
+                  (this.spriteY + this.y)*scale, ...
                   'w');
                 
                 this.h_foe.plot(fig, ...
-                     (this.spriteX + this.x)*saudefense.scale, ...
-                     (this.spriteY + this.y)*saudefense.scale, ...
+                     (this.spriteX + this.x)*scale, ...
+                     (this.spriteY + this.y)*scale, ...
                       'Color', [0 0 0]);            
             this.h_fill.show;
         else
             this.h_fill.show(false);
-            this.h_foe.plot(fig, this.x*saudefense.scale, this.y*saudefense.scale, ...
+            this.h_foe.plot(fig, this.x*scale, this.y*scale, ...
                 'Marker', 'x', 'Color', [1 0 0]);
         end
     end
@@ -136,7 +136,7 @@ methods(Access=public)
         points = this.kind;
     end
     
-    function done = update(this)
+    function done = update(this, ~)
         this.x  = this.x + this.vx*this.T;        
         if abs(this.x) > saudefense.W/2
             this.alive = false;
