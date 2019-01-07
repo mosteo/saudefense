@@ -16,6 +16,8 @@ properties(Constant)
     
     difficulty_period = 5*60; % Time until max diff
     initial_lives     = 3;
+    
+    MAX_FOES = 12;
 end
 
 properties        
@@ -240,12 +242,13 @@ methods(Access=public)
     
     function foeing(this)
         % Generate?
-        max_foes = 1 + ceil(this.difficulty * 8);
+        max_foes = 1 + ceil(this.difficulty * (this.MAX_FOES - 1));
         
-        if numel(this.foes) < max_foes && ...
-           rand < poisspdf(1, (this.foe_lambda + this.difficulty/2)*this.T)
+        if numel(this.foes) == 0 || ...
+          (numel(this.foes) < max_foes && ...
+           rand < poisspdf(1, (this.foe_lambda + this.difficulty/2)*this.T))
             this.foes{end+1} = foe(this.T, ...
-                2-(rand>this.difficulty*0.99), ...
+                2-(rand+0.99>this.difficulty), ...
                 this.difficulty);
         end
         
@@ -517,8 +520,7 @@ methods(Access=public)
         disp('Controller: '); display(C);
         disp('Plant: ');      display(G);
         this.loop = loop_single(tff, this.T, C*G, 1); 
-        this.gun.loop = this.loop;
-        this.gun.x = 0;
+        this.gun.set_loop(this.loop);
     end        
     
     function tic(this)

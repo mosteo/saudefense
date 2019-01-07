@@ -2,6 +2,10 @@
 
 classdef(Abstract) i_killable < handle 
     
+properties
+    id % unique id so change of target is easier to keep track of
+end
+    
 methods(Abstract)
     
     hit = check_hit(this, fx, fy, fa)

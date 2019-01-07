@@ -21,6 +21,10 @@ properties(Constant)
     firing_len   = 0.5  % time a firing lasts   
     cooldown_len = 1    % time until next shot ready       
     wave_len     = 1    % time exploding
+    
+    MODE_COOL = 1   % Cooldown after firing
+    MODE_TS   = 2   % Cooldown after targeting (response time)
+    mode      = gun.MODE_TS
 end
     
 properties
@@ -31,6 +35,8 @@ properties
     exploding = 0;
     armed    = true;         
     autofire = true;
+    
+    ts = Inf; % Response time
     
     G, H
     
@@ -50,9 +56,9 @@ methods
     
     function this = gun(loop)
         % set dynamics        
-        this.loop = loop;
         this.G    = loop.G;
         this.H    = loop.H;
+        this.set_loop(loop);                
         
         this.x = 0;
         this.y = 0;
@@ -185,8 +191,26 @@ methods
         bool = isa(this.target, 'i_killable');
     end
     
+    function set_loop(this, loop)
+        this.loop = loop;
+        this.reset_state();
+        
+        info    = stepinfo(loop.get_tf());        
+        this.ts = info.SettlingTime;
+        fprintf('Gun has %.2f s response time\n', this.ts);
+    end
+    
     function set_target(this, target)
+        prev_target = this.target;        
         this.target = target;
+        
+        if this.mode == this.MODE_TS
+            if isa(target, 'i_killable')
+                if ~isa(prev_target, 'i_killable') || prev_target.id ~= target.id
+                    this.cooldown = this.ts;
+                end
+            end
+        end
     end
     
     function y = output(this, x)

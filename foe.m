@@ -3,7 +3,7 @@ classdef foe < i_body & i_drawable & i_killable
     
 properties(Constant)
     vy_max = 4;
-    accel  = 1;
+    accel  = 9.8;
     dying_len = 2;
     
     missile_min_spd = 10;
@@ -25,9 +25,7 @@ end
 
 properties
     % x, y      % Those are inherited from i_body
-    vx, vy    
-    
-    id % unique id so change of target is easier to keep track of
+    vx, vy        
         
     kind
     alive = true
@@ -65,8 +63,8 @@ methods(Access=public)
             case this.BOMB
                 fprintf('Incoming bomb!\n')
                 this.x = (rand*saudefense.W-saudefense.W/2)*(1 - saudefense.OS);
-                this.y = saudefense.H;
-                this.vy = 0;
+                this.y = saudefense.H + 2.5;
+                this.vy = -1;
                 this.vx = 0;
                 this.spriteX = this.bombX;
                 this.spriteY = this.bombY;

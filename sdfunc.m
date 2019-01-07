@@ -216,7 +216,7 @@ methods(Static)
 
     function update_texts(h, sau)
         h.load.String = ...
-            sprintf('CPU Load: %3.0f%%', mean(sau.load)*100);
+            sprintf('CPU Load: %.0f%%', mean(sau.load)*100);
         if sau.load > 1
             h.load.ForegroundColor = [1 0 0];
         else
@@ -224,7 +224,7 @@ methods(Static)
         end
 
         h.cooldown.String = ...
-            sprintf('Cooldown: %3.1f', sau.gun.cooldown);
+            sprintf('Arming time (Tₛ): %.2f/%.2f', sau.gun.cooldown, sau.gun.ts);
         if sau.gun.cooldown > 0
             h.cooldown.ForegroundColor = [1 0 0];
         else
