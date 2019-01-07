@@ -323,6 +323,8 @@ methods(Static)
         plot(axe, poles, 'rx'); % maybe faster
         %rlocus(axe, feedback(C*G, 1), 'r', 0);
         
+        axis auto
+        
         % Try to adjust around response time
 %         if ~isnan(info.SettlingTime)
 %             ranges    = axis(axe);
