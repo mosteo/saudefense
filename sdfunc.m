@@ -10,8 +10,6 @@ methods(Static)
 
     function h = init(handles)        
         
-        'QUITAR POISSONPDF'
-        
         handles.initializing.Position = [0 0 1 1];
         %drawnow
 
@@ -212,6 +210,7 @@ methods(Static)
     function update_difficulty_panel(h)
         h.panel_difficulty.Title = ...
             sprintf('Difficulty: %5.3f', h.props.sau.difficulty);
+        h.difficulty.Value = h.props.sau.difficulty;
     end
 
     function update_texts(h, sau)

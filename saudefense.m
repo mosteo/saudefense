@@ -9,7 +9,7 @@ properties(Constant)
     
     fragments = 8   % debris from gun
     
-    foe_lambda = 1 % Incomings per second (lambda for poisson)
+    foe_lambda = 1/0.8 % Incomings per second (lambda for poisson)
     % initial rate, that increases with difficulty
     
     foe_manual_dist = 16 % Distance for a target to be considered (in manual targeting)                
@@ -18,8 +18,8 @@ properties(Constant)
     initial_lives     = 3
     
     DEFAULT_PERIOD = 0.05
-    MAX_FOES = 16
-    MISSILE_PROB = 0.05
+    MAX_FOES       = 20
+    MISSILE_PROB   = 0.05
 end
 
 properties        
@@ -248,7 +248,7 @@ methods(Access=public)
         
         if numel(this.foes) == 0 || ...
           (numel(this.foes) < max_foes && ...
-           rand < poisspdf(1, (this.foe_lambda + this.difficulty/2)*this.T))
+           rand < dumbpoissonpdf(1, (this.foe_lambda + this.difficulty/2)*this.T))
             this.foes{end+1} = foe(this.T, ...
                 2-(rand+1-this.MISSILE_PROB>this.difficulty), ...
                 this.difficulty);
