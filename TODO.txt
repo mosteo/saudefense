@@ -1,5 +1,0 @@
-Algún tipo de saturación
-
-Paneles para los motores
-
-Paneles y clases para lead-net, lead-lag-net

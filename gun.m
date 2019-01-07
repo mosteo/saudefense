@@ -67,7 +67,7 @@ methods
         this.h_ray = drawer();
         this.h_wave = drawer();
         
-        a=0:pi/16:pi;
+        a=0:pi/32:pi;
         this.x_wave=cos(a)';
         this.y_wave=sin(a)';
     end
@@ -192,12 +192,20 @@ methods
     end
     
     function set_loop(this, loop)
+        this.period = loop.period;
+        
         this.loop = loop;
         this.reset_state();
         
-        info    = stepinfo(loop.get_tf());        
+        info    = stepinfo(loop.get_tf()); 
         this.ts = info.SettlingTime;
         fprintf('Gun has %.2f s response time\n', this.ts);
+        
+        if info.PeakTime < info.SettlingTime % Overshoot
+            if info.PeakTime < this.period*2
+                fprintf(2, 'Warning: Simulation time step reduced due to gun dynamics (Ts=%.5f)\n', info.PeakTime);
+            end
+        end
     end
     
     function set_target(this, target)

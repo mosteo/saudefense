@@ -149,7 +149,6 @@ if handles.props.sau.T < 0.001
     handles.props.sau.T = 0.001;
     handles.period.String= '0.001';
 end
-handles.looper.Period = handles.props.sau.T;
 
 sdfunc.update_LTI(handles);
 

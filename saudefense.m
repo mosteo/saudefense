@@ -5,19 +5,21 @@ properties(Constant)
     W       = 90    % world width
     H       = 160   % world height
     Vr_max  = 5    
-    OS      = 0.2   % Overshoot for lateral bands
+    OS      = 0.15   % Overshoot for lateral bands
     
     fragments = 8   % debris from gun
     
-    foe_lambda = 1/4 % Incomings per second (lambda for poisson)
+    foe_lambda = 1 % Incomings per second (lambda for poisson)
     % initial rate, that increases with difficulty
     
     foe_manual_dist = 16 % Distance for a target to be considered (in manual targeting)                
     
-    difficulty_period = 5*60; % Time until max diff
-    initial_lives     = 3;
+    difficulty_period = 5*60  % Time until max diff
+    initial_lives     = 3
     
-    MAX_FOES = 12;
+    DEFAULT_PERIOD = 0.05
+    MAX_FOES = 16
+    MISSILE_PROB = 0.05
 end
 
 properties        
@@ -248,7 +250,7 @@ methods(Access=public)
           (numel(this.foes) < max_foes && ...
            rand < poisspdf(1, (this.foe_lambda + this.difficulty/2)*this.T))
             this.foes{end+1} = foe(this.T, ...
-                2-(rand+0.99>this.difficulty), ...
+                2-(rand+1-this.MISSILE_PROB>this.difficulty), ...
                 this.difficulty);
         end
         
@@ -521,6 +523,10 @@ methods(Access=public)
     % Update things on the fly... yikes!
     % For changes in PID parameters, T, ...
     % Receives ideal s-tf Controller and Plant
+    
+        info = stepinfo(feedback(C*G, 1));
+        this.T = min(this.DEFAULT_PERIOD, info.PeakTime);
+    
         disp('Controller: '); display(C);
         disp('Plant: ');      display(G);
         this.loop = loop_single(tff, this.T, C*G, 1); 

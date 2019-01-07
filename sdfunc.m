@@ -308,7 +308,7 @@ methods(Static)
         % %drawnow
     end    
     
-    function update_rlocus(axe, C, G, info)
+    function update_rlocus(axe, C, G, info) %#ok
         axes(axe);
         cla(axe);
         hold(axe, 'on');
@@ -363,6 +363,9 @@ methods(Static)
         end
 
         h.props.sau.update_LTI(h.props.tff, C, G);
+        
+        h.period.String = sprintf('%.3f', h.props.sau.T);
+        % May have changed after sau.update_LTI
 
         % TODO: obtain C, G, from sau as it is being used (if discretized)
 
