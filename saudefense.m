@@ -9,7 +9,7 @@ properties(Constant)
     
     fragments = 8   % debris from gun
     
-    foe_lambda = 1/0.8 % Incomings per second (lambda for poisson)
+    foe_lambda = 1/0.5 % Incomings per second (lambda for poisson)
     % initial rate, that increases with difficulty
     
     foe_manual_dist = 16 % Distance for a target to be considered (in manual targeting)                

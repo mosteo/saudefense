@@ -54,7 +54,7 @@ methods(Access=public)
             difficulty = 0.5;
         end
         
-        this.ay = this.default_accel + difficulty*2;
+        this.ay = this.default_accel + difficulty*3;
         
         this.kind = kind;
         
