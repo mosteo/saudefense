@@ -22,7 +22,7 @@ function varargout = sdgui(varargin)
 
 % Edit the above text to modify the response to help sdgui
 
-% Last Modified by GUIDE v2.5 04-Jan-2019 18:16:14
+% Last Modified by GUIDE v2.5 07-Jan-2019 12:41:21
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -353,4 +353,19 @@ opts.WindowStyle = 'modal';
 msgbox({'When running in Competition Mode the following changes apply:', ...
     '- The game will end after a hit without shields.', ...
     '- Changes applied during execution will not have effect.'}, ...
+    'Value', opts);
+
+
+% --- Executes on button press in pb_help_gun.
+function pb_help_gun_Callback(hObject, eventdata, handles)
+% hObject    handle to pb_help_gun (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+opts.Interpreter = 'none';
+opts.WindowStyle = 'modal';
+msgbox({'Gun states:', ...
+    '△ Ready to fire', ...
+    '○ Arming', ...
+    '▽ Unable to fire due to excessive speed or acceleration', ...
+    '× Destroyed'}, ...
     'Value', opts);

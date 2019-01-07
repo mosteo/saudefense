@@ -242,7 +242,7 @@ methods(Access=public)
     
     function foeing(this)
         % Generate?
-        max_foes = 1 + ceil(this.difficulty * (this.MAX_FOES - 1));
+        max_foes = 1 + ceil(this.difficulty * (this.MAX_FOES - 1)); 
         
         if numel(this.foes) == 0 || ...
           (numel(this.foes) < max_foes && ...
@@ -279,6 +279,10 @@ methods(Access=public)
             
                 if hit_it
                    this.foes{i}.die();
+                   this.debrises = [this.debrises ...
+                    debris.create(3, ...
+                                  this.foes{i}.x, ...
+                                  this.foes{i}.y)];
                 end
             else
                 hit_it = false;
