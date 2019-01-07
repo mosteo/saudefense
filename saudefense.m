@@ -5,7 +5,7 @@ properties(Constant)
     W       = 90    % world width
     H       = 160   % world height
     Vr_max  = 5    
-    OS      = 0.15   % Overshoot for lateral bands
+    OS      = 0.10   % Overshoot for lateral bands
     
     fragments = 8   % debris from gun
     
@@ -20,6 +20,7 @@ properties(Constant)
     DEFAULT_PERIOD = 0.05
     MAX_FOES       = 20
     MISSILE_PROB   = 0.05
+    FOE_FRAGS      = 2
 end
 
 properties        
@@ -282,7 +283,7 @@ methods(Access=public)
                 if hit_it
                    this.foes{i}.die();
                    this.debrises = [this.debrises ...
-                    debris.create(3, ...
+                    debris.create(this.FOE_FRAGS, ...
                                   this.foes{i}.x, ...
                                   this.foes{i}.y)];
                 end

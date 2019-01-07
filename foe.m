@@ -3,11 +3,11 @@ classdef foe < i_body & i_drawable & i_killable
     
 properties(Constant)
     vy_max = 4;
-    accel  = 9.8;
+    default_accel  = 9.8;
     dying_len = 2;
     
-    missile_min_spd = 10;
-    missile_max_spd = 15;
+    missile_min_spd = 12;
+    missile_max_spd = 18;
     
     BOMB = 1
     MISL = 2
@@ -26,6 +26,8 @@ end
 properties
     % x, y      % Those are inherited from i_body
     vx, vy        
+    
+    ay
         
     kind
     alive = true
@@ -51,6 +53,8 @@ methods(Access=public)
         if nargin < 3
             difficulty = 0.5;
         end
+        
+        this.ay = this.default_accel + difficulty*2;
         
         this.kind = kind;
         
@@ -140,7 +144,7 @@ methods(Access=public)
         end        
         
         if this.kind == this.BOMB || this.dying > 0
-            this.vy = this.vy + this.accel*this.T;
+            this.vy = this.vy + this.ay*this.T;
         end
         
         this.y = this.y - this.vy*this.T;  
