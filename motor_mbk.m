@@ -1,3 +1,7 @@
+%   Authors: Alejandro R. Mosteo, Danilo Tardioli, Eduardo Montijano
+%   Copyright 2018-9999 Monmostar
+%   Licensed under GPLv3 https://www.gnu.org/licenses/gpl-3.0.en.html
+%
 % A motor that has 2nd order response (plus integrator!)
 
 classdef motor_mbk < i_tf

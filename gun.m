@@ -1,3 +1,7 @@
+%   Authors: Alejandro R. Mosteo, Danilo Tardioli, Eduardo Montijano
+%   Copyright 2018-9999 Monmostar
+%   Licensed under GPLv3 https://www.gnu.org/licenses/gpl-3.0.en.html
+%
 classdef gun < i_body & i_drawable & i_loop & i_killer
 % We could directly inherit from loop_single to save a few methods
 % This way we make the gun reusable for different loop implementations.
