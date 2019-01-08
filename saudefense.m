@@ -5,7 +5,8 @@ properties(Constant)
     W       = 90    % world width
     H       = 160   % world height
     Vr_max  = 5    
-    OS      = 0.10   % Overshoot for lateral bands
+    OS      = 0.20   % Overshoot for lateral bands
+    BAND    = saudefense.OS/(1+2*saudefense.OS);
     
     fragments = 8   % debris from gun
     
@@ -314,7 +315,7 @@ methods(Access=public)
         this.man_target = 0;        
         for i = 1:numel(this.foes)
             if ~this.foes{i}.alive; continue; end % disintegrating
-            if abs(this.foes{i}.x) > this.W/2*(1-this.OS); continue; end % Can't target yet
+            if abs(this.foes{i}.x) > this.W/2*(1-this.BAND); continue; end % Can't target yet
             d = norm([mouse(1,1) - this.foes{i}.x; ...
                       mouse(1,2) - this.foes{i}.y]);
             if d < this.foe_manual_dist && d < cl_dist
@@ -337,7 +338,7 @@ methods(Access=public)
                 if this.foes{i}.y > this.H - this.foes{i}.size; continue; end
                 % Barely visible, do not consider yet
                 
-                if abs(this.foes{i}.x) > this.W/2*(1-this.OS); continue; end 
+                if abs(this.foes{i}.x) > this.W/2*(1-this.BAND); continue; end 
                 % Can't target yet because of overshoot
 
                 dist = norm([this.gun.x - this.foes{i}.x; this.foes{i}.y]);
@@ -373,8 +374,8 @@ methods(Access=public)
         
         % Background
         fill(this.fig, ...
-            [-this.W/2*(1-this.OS); this.W/2*(1-this.OS); ...
-             this.W/2*(1-this.OS); -this.W/2*(1-this.OS)]*this.scale, ...
+            [-this.W/2*(1-this.BAND); this.W/2*(1-this.BAND); ...
+             this.W/2*(1-this.BAND); -this.W/2*(1-this.BAND)]*this.scale, ...
             [0; 0; this.H; this.H], 'w');
         
         % Frame

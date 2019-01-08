@@ -1,3 +1,5 @@
+
+
 classdef panel_pd < panel_3rows
     
 properties
@@ -9,7 +11,7 @@ properties
     label_footer = 'C(s) = K·(s + z)'
     
     init_A = '0.1'
-    init_B = '1'
+    init_B = '10'
     init_C = '0'
 end
     

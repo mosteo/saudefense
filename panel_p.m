@@ -8,7 +8,7 @@ properties
     label_C = 'unused'
     label_footer = 'C(s) = K'
     
-    init_A = '0.01'
+    init_A = '0.075'
     init_B = '0'
     init_C = '0'
 end

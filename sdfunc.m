@@ -173,7 +173,7 @@ methods(Static)
         % Reset if competing for the first time after test
         if ~h.props.competing && h.props.running && compete
             sdfunc.reset(h);
-            seed = mod(idivide(int64(round(now*100000)), int64(60), 'floor'), 10000);
+            seed = 2019;%mod(idivide(int64(round(now*100000)), int64(60), 'floor'), 10000);
             % Changes once per minute            
             rng(seed);
             h.text_seed.String = sprintf('Random seed: %d', seed);
@@ -281,15 +281,15 @@ methods(Static)
         axis auto
         ax = axis(axe);
         
-        [y1,t1] = step(feedback(G, 1), tend);
-        plot(axe, t1, y1, 'r');
+%         [y1,t1] = step(feedback(G, 1), tend);
+%         plot(axe, t1, y1, 'r');
         ax(2) = tend(end);
         axis(axe, ax);
         
 %         step(axe, feedback(G, 1), tplot, 'r');   % uncompensated         
 %         step(axe, feedback(C*G, 1), tplot, 'b'); % compensated
         
-        legend(axe, 'compensated', 'uncompensated', 'Location', 'southwest');
+        legend(axe, 'step response', 'uncompensated', 'Location', 'southwest');
         
         title(axe, '');
         ylabel(axe, '');     
