@@ -255,6 +255,10 @@ methods(Static)
         [y1,t1] = step(feedback(1, C*G), tend);
         [y2,t2] = step(1/s/(1 + C*G), tend);
         plot(axe, t1, y1, 'b', t2, y2, 'r');
+        axis auto
+        ax = axis(axe);
+        ax(2) = tend(end);
+        axis(axe, ax);
             
         %title('Manual response')
         
@@ -274,10 +278,12 @@ methods(Static)
         % Use compensated as axis for when uncompensated is unstable
         [y2,t2] = step(feedback(C*G, 1), tend);
         plot(axe, t2, y2, 'b');
+        axis auto
         ax = axis(axe);
         
         [y1,t1] = step(feedback(G, 1), tend);
         plot(axe, t1, y1, 'r');
+        ax(2) = tend(end);
         axis(axe, ax);
         
 %         step(axe, feedback(G, 1), tplot, 'r');   % uncompensated         
