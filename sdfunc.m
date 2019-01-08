@@ -36,6 +36,7 @@ methods(Static)
             loop_single(handles.props.tff, sdconst.default_period, C*G, 1));
 
         sau = handles.props.sau;
+        sdfunc.update_texts(handles, sau);
 
         sau.plot_hist = handles.do_siso.Value;
         
@@ -227,7 +228,7 @@ methods(Static)
         end
 
         h.cooldown.String = ...
-            sprintf('Arming time (Tₛ): %.2f/%.2f', sau.gun.cooldown, sau.gun.ts);
+            sprintf('Arming time (Ts): %.2f/%.2f', sau.gun.cooldown, sau.gun.ts);
         if sau.gun.cooldown > 0
             h.cooldown.ForegroundColor = [1 0 0];
         else
@@ -293,7 +294,8 @@ methods(Static)
 %         step(axe, feedback(G, 1), tplot, 'r');   % uncompensated         
 %         step(axe, feedback(C*G, 1), tplot, 'b'); % compensated
         
-        legend(axe, 'step response', 'uncompensated', 'Location', 'southwest');
+        %legend(axe, 'step response', 'uncompensated', 'Location', 'southwest');
+        legend(axe, 'step response', 'Location', 'southeast');
         
         title(axe, '');
         ylabel(axe, '');     
