@@ -228,7 +228,7 @@ methods(Static)
         end
 
         h.cooldown.String = ...
-            sprintf('Arming time (Ts): %.2f/%.2f', sau.gun.cooldown, sau.gun.ts);
+            sprintf('Arming time (Ts): %.2f/%.4f', sau.gun.cooldown, sau.gun.ts);
         if sau.gun.cooldown > 0
             h.cooldown.ForegroundColor = [1 0 0];
         else

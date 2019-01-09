@@ -279,8 +279,10 @@ methods(Access=public)
                                    this.gun.y - this.foes{i}.y]) <= this.gun.radius();               
                 elseif this.gun.firing > 0 
                     hit_it = this.foes{i}.check_hit(this.gun.x, this.gun.y, pi/2);
-                    this.hits  = this.hits + 1;
-                    this.score = this.score + this.foes{i}.score;
+                    if hit_it
+                        this.hits  = this.hits + 1;
+                        this.score = this.score + this.foes{i}.score;
+                    end
                 else
                     hit_it = false;
                 end                       
