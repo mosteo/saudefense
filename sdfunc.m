@@ -275,16 +275,24 @@ methods(Static)
         %drawnow
     end    
     
-    function update_response_plot(axe, C, G, tend)        
+    function update_response_plot(axe, sau, tend)        
         axes(axe);
         cla(axe);
         hold(axe, 'on');
         
+        % reference overshoot
+        plot(axe, [0; tend], [1; 1], ...
+            'Color', [0 0 0], 'LineStyle', ':');
+        
+        % overshoot
+        plot(axe, [0; tend], [1 + sau.OS; 1 + sau.OS], ...
+            'Color', [1 0 0], 'LineStyle', ':');
+        
         % Use compensated as axis for when uncompensated is unstable
-        [y2,t2] = step(feedback(C*G, 1), tend);
+        [y2,t2] = step(sau.loop.get_tf(), tend);
         plot(axe, t2, y2, 'b');
         axis auto
-        ax = axis(axe);
+        ax = axis(axe);                
         
 %         [y1,t1] = step(feedback(G, 1), tend);
 %         plot(axe, t1, y1, 'r');
@@ -376,13 +384,14 @@ methods(Static)
         end
 
         h.props.sau.update_LTI(h.props.tff, C, G);
+        sdfunc.update_texts(h, h.props.sau);
         
         h.period.String = sprintf('%.3f', h.props.sau.T);
         % May have changed after sau.update_LTI
 
         % TODO: obtain C, G, from sau as it is being used (if discretized)
 
-        sdfunc.update_response_plot(h.response, C, G, tend);
+        sdfunc.update_response_plot(h.response, h.props.sau, tend);
         h.updating.String = 'Updating..';
         sdfunc.update_error_plot(h.error, C, G, tend);
         h.updating.String = 'Updating...';
