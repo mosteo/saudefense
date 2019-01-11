@@ -280,9 +280,16 @@ methods(Static)
         cla(axe);
         hold(axe, 'on');
         
-        % reference overshoot
+        % reference
         plot(axe, [0; tend], [1; 1], ...
             'Color', [0 0 0], 'LineStyle', ':');
+        
+        % response time
+        if sau.gun.ts < Inf
+            plot(axe, [sau.gun.ts; sau.gun.ts], [0; 1], ...
+                'Color', [0 0 0], 'LineStyle', ':');
+            xticks([0, sau.gun.ts]);
+        end
         
         % overshoot
         plot(axe, [0; tend], [1 + sau.OS; 1 + sau.OS], ...
