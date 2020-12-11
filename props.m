@@ -20,6 +20,10 @@ properties(Access=public)
     h_y  % Drawers for history
     
     tff = @tf_factory.ss;    
+    
+    league = true 
+    % When league, plant is fixed and always disabled, so final scores can
+    % be submitted with guarantees
 end
 
 methods(Static)

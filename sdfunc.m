@@ -137,9 +137,21 @@ methods(Static)
         
         h.difficulty.Enable = enabled;
         h.pop_controller.Enable = enabled;
-        h.pop_plant.Enable = enabled;
         
-        for w=[allchild(h.p_controller); allchild(h.p_plant)]'
+        if h.props.league
+            enable_plant = 'off';            
+        else
+            enable_plant = enable;
+        end
+        h.pop_plant.Enable = enable_plant;
+        
+        for w=allchild(h.p_plant)'
+            if isprop(w, 'Enable')
+                w.Enable = enable_plant;
+            end
+        end
+        
+        for w=allchild(h.p_controller)'
             if isprop(w, 'Enable')
                 w.Enable = enabled;
             end
