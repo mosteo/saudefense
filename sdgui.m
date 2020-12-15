@@ -28,6 +28,12 @@ function varargout = sdgui(varargin)
 
 % Last Modified by GUIDE v2.5 07-Jan-2019 12:41:21
 
+%% MY PRELIMINARY CHECKS, BEFORE GUI
+if ~sdfunc.initialization_check()
+    return
+end
+%%
+
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
 gui_State = struct('gui_Name',       mfilename, ...

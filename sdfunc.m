@@ -60,6 +60,21 @@ methods(Static)
         disp('Ready');
     end
     
+    function ok = initialization_check()
+        % Check resolution to avoid misplaced widgets
+        set(0,'units','pixels');
+        sizes = get(0,'screensize');
+        width = sizes(3); height = sizes(4);
+        if width < 1280 || height < 720
+           errordlg(sprintf(strcat('La resolución de la pantalla debe ser al menos 1280x720.\n', ...
+                                   'Se ha detectado %dx%d'), width, height), ...
+                                   'My Error Dialog', 'modal');
+           ok = false;
+        else
+           ok = true;
+        end
+    end
+    
     function reset(h)
     % Reinitializes minimal things to start a new competition
         % Get TFs
