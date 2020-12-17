@@ -1,0 +1,10 @@
+[Desktop Entry]
+Name=SAUdefense
+GenericName=SAUdefense
+Comment=SAUdefense
+Exec=/home/sau/SAUdefense.run
+Terminal=true
+Type=Application
+Icon=preferences-system-network
+Path=
+StartupNotify=true
