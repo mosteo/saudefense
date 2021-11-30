@@ -150,12 +150,28 @@ methods(Static)
         end
     end        
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+    function text = trim_tf(G)
+        text = evalc('display(G)');
+        text = (strrep(text, 'G =', ''));
+        text = (strrep(text, 'Continuous-time transfer function.', ''));
+    end    
     
+
     function enable_all(h, enable)
         enabled = sdconst.onoff(enable);
+                
+        h.text_C.Visible = sdfunc.cmd_line;
+        h.text_G.Visible = sdfunc.cmd_line;
+        
+        if sdfunc.cmd_line
+           h.text_C.String = sdfunc.trim_tf(h.arg_C);
+           h.text_G.String = sdfunc.trim_tf(h.arg_G);
+        end
         
         h.difficulty.Enable = enabled;
         h.pop_controller.Enable = enabled;
+        h.pop_controller.Visible = ~sdfunc.cmd_line;
         
         if h.props.league
             enable_plant = 'off';            
@@ -163,18 +179,21 @@ methods(Static)
             enable_plant = enable;
         end
         h.pop_plant.Enable = enable_plant;
+        h.pop_plant.Visible = ~sdfunc.cmd_line;
         
         for w=allchild(h.p_plant)'
             if isprop(w, 'Enable')
                 w.Enable = enable_plant;
+                w.Visible = ~sdfunc.cmd_line;
             end
         end
         
         for w=allchild(h.p_controller)'
             if isprop(w, 'Enable')
                 w.Enable = enabled;
+                w.Visible = ~sdfunc.cmd_line;
             end
-        end
+        end        
     end
 
     function start_stop(h, compete)        
