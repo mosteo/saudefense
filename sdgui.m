@@ -56,7 +56,7 @@ try
     end
 catch ME
     fprintf(2, '%s\n', getReport(ME, 'extended'));
-    close(gcbf, 'force')
+    close(findall(0, 'tag', 'sdgui_main'), 'force')
 end
 % End initialization code - DO NOT EDIT
 
@@ -78,8 +78,13 @@ if size(varargin) ~= 2
     return
 end
 
-handles.arg_C = varargin{1};
-handles.arg_G = varargin{2};
+handles.props = props();
+
+handles.props.cmd_line = true;
+handles.props.arg_C = tf(varargin{1});
+handles.props.arg_G = tf(varargin{2});
+% We use tf() to ensure the models are basic tfs, as sisotool exports as
+% zpk models which are not directly usable by saudefense
 
 % MY OWN INITIALIZATION
 guidata(hObject, sdfunc.init(handles));

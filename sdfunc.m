@@ -6,22 +6,16 @@ classdef sdfunc
 % Contains our own GUI-related things, to isolate them somehow from
 % the automatic callbacks created by Matlab
 
-properties(Constant)
-    cmd_line = true
-end
-
 methods(Static)
     
     function common_callback(~, ~) % hObject, eventdata
         sdfunc.update_LTI(guidata(gcf));
     end
 
-    function h = init(handles)        
+    function h = init(handles, cmd_line)        
         
         handles.initializing.Position = [0 0 1 1];
-        %drawnow
-
-        handles.props = props();
+        %drawnow        
 
         % Control diagram
         axes(handles.diagram);
@@ -135,7 +129,7 @@ methods(Static)
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     function done = looper(h)      
         h.props.sau.tic()
-        done = h.props.sau.iterate();
+        done = h.props.sau.iterate(h.props);
 
         sdfunc.update_difficulty_panel(h);
         sdfunc.update_texts(h, h.props.sau);    
@@ -161,17 +155,17 @@ methods(Static)
     function enable_all(h, enable)
         enabled = sdconst.onoff(enable);
                 
-        h.text_C.Visible = sdfunc.cmd_line;
-        h.text_G.Visible = sdfunc.cmd_line;
+        h.text_C.Visible = h.props.cmd_line;
+        h.text_G.Visible = h.props.cmd_line;
         
-        if sdfunc.cmd_line
-           h.text_C.String = sdfunc.trim_tf(h.arg_C);
-           h.text_G.String = sdfunc.trim_tf(h.arg_G);
+        if h.props.cmd_line
+           h.text_C.String = sdfunc.trim_tf(h.props.arg_C);
+           h.text_G.String = sdfunc.trim_tf(h.props.arg_G);
         end
         
         h.difficulty.Enable = enabled;
         h.pop_controller.Enable = enabled;
-        h.pop_controller.Visible = ~sdfunc.cmd_line;
+        h.pop_controller.Visible = ~h.props.cmd_line;
         
         if h.props.league
             enable_plant = 'off';            
@@ -179,19 +173,19 @@ methods(Static)
             enable_plant = enable;
         end
         h.pop_plant.Enable = enable_plant;
-        h.pop_plant.Visible = ~sdfunc.cmd_line;
+        h.pop_plant.Visible = ~h.props.cmd_line;
         
         for w=allchild(h.p_plant)'
             if isprop(w, 'Enable')
                 w.Enable = enable_plant;
-                w.Visible = ~sdfunc.cmd_line;
+                w.Visible = ~h.props.cmd_line;
             end
         end
         
         for w=allchild(h.p_controller)'
             if isprop(w, 'Enable')
                 w.Enable = enabled;
-                w.Visible = ~sdfunc.cmd_line;
+                w.Visible = ~h.props.cmd_line;
             end
         end        
     end
@@ -258,9 +252,9 @@ methods(Static)
     end
 
     function [C, G] = gui_LTI_config(h)
-        if sdfunc.cmd_line
-            C = h.arg_C;
-            G = h.arg_G;
+        if h.props.cmd_line
+            C = h.props.arg_C;
+            G = h.props.arg_G;
         else 
             C = h.props.widget_controller.get_tf();
             G = h.props.widget_plant.get_tf();

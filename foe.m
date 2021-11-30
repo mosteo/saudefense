@@ -44,12 +44,15 @@ properties
     
     h_foe;  % Drawers
     h_fill;
+    
+    props % Stored for convenience
 end
     
 methods(Access=public)
     
-    function this = foe(period, kind, difficulty)                
+    function this = foe(period, kind, difficulty, props, G)                
         this.T = period;
+        this.props = props;
         
         if nargin < 2
             kind = mod(tic, 2) + 1;
@@ -72,7 +75,15 @@ methods(Access=public)
                 fprintf('Incoming bomb!\n')
                 this.x = (rand*saudefense.W-saudefense.W/2)*(1 - saudefense.OS);
                 this.y = saudefense.H + 2.5;
-                this.vy = -1;
+                
+                if props.cmd_line                    
+                    % Proportional to "response time" of the plant
+                    this.vy = -sum(pole(G))/numel(pole(G))* ...
+                        13; % Magic number so it is something normal...
+                else
+                    this.vy = -1;
+                end
+                
                 this.vx = 0;
                 this.spriteX = this.bombX;
                 this.spriteY = this.bombY;
@@ -147,8 +158,10 @@ methods(Access=public)
             this.alive = false;
         end        
         
-        if this.kind == this.BOMB || this.dying > 0
-            this.vy = this.vy + this.ay*this.T;
+        if this.kind == this.BOMB || this.dying > 0    
+            if ~this.props.cmd_line
+                this.vy = this.vy + this.ay*this.T;          
+            end
         end
         
         this.y = this.y - this.vy*this.T;  

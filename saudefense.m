@@ -20,7 +20,7 @@ properties(Constant)
     foe_manual_dist = 16 % Distance for a target to be considered (in manual targeting)                
     
     difficulty_period = 5*60  % Time until max diff
-    initial_lives     = 3
+    initial_lives     = 2
     
     DEFAULT_PERIOD = 0.05
     MAX_FOES       = 20
@@ -176,13 +176,13 @@ methods(Access=public)
         this.draw_init();
     end   
     
-    function compute(this)
+    function compute(this, props)
         
         % Difficulty
         this.difficulty = ...
             min(1, this.difficulty + 1/this.difficulty_period*this.T);
         
-        this.foeing();
+        this.foeing(props);
         
         this.fire();
                 
@@ -249,7 +249,7 @@ methods(Access=public)
         end
     end
     
-    function foeing(this)
+    function foeing(this, props)
         % Generate?
         max_foes = 1 + ceil(this.difficulty * (this.MAX_FOES - 1)); 
         
@@ -258,7 +258,9 @@ methods(Access=public)
            rand < dumbpoissonpdf(1, (this.foe_lambda + this.difficulty/2)*this.T))
             this.foes{end+1} = foe(this.T, ...
                 2-(rand+1-this.MISSILE_PROB>this.difficulty), ...
-                this.difficulty);
+                this.difficulty, ...
+                props, ...
+                this.loop.G);
         end
         
         % Move 
@@ -468,25 +470,25 @@ methods(Access=public)
         return
     end   
     
-    function forever(this)
+    function forever(this, props)
         this.nogui = true;
         
         done = false;
         while ~done
             this.tic;            
-            done    = this.iterate;                       
+            done    = this.iterate(props);                       
             pause(this.T - this.toc);
 %             this.toc;
         end
     end
     
-    function done = iterate(this)
+    function done = iterate(this, props)
         done = (this.lives < 0) && (this.gun.exploding <= 2*this.T);
         
         this.iterations = this.iterations + 1;
         
         % Compute
-        this.compute;
+        this.compute(props);
 
         % Draw
         this.draw;           

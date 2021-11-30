@@ -6,6 +6,13 @@ classdef props < handle
 % Ref class to avoid updating the handles every time
 
 properties(Access=public)  
+    cmd_line  = false
+    % When true, we disable all panels to configure controller/plant and
+    % rely on the C, G passed to sdgui: sdgui(C, G)
+    
+    arg_C, arg_G
+    % When cmd_line, we store here the parameters received
+    
     competing = false % SET TO TRUE TO AVOID STUDENTS CHANGING CERTAIN THINGS
     % Currently: no effect
     
