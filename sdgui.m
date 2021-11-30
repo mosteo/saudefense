@@ -2,6 +2,7 @@
 %   Copyright 2018-9999 Monmostar
 %   Licensed under GPLv3 https://www.gnu.org/licenses/gpl-3.0.en.html
 %
+
 function varargout = sdgui(varargin)
 % SDGUI MATLAB code for sdgui.fig
 %      SDGUI, by itself, creates a new SDGUI or raises the existing
@@ -27,6 +28,7 @@ function varargout = sdgui(varargin)
 % Edit the above text to modify the response to help sdgui
 
 % Last Modified by GUIDE v2.5 07-Jan-2019 12:41:21
+
 
 %% MY PRELIMINARY CHECKS, BEFORE GUI
 if ~sdfunc.initialization_check()
@@ -63,6 +65,16 @@ function sdgui_OpeningFcn(hObject, eventdata, handles, varargin)
 
 % Choose default command line output for sdgui
 handles.output = hObject;
+
+%% VERIFY ARGUMENTS
+if size(varargin) ~= 2
+    fprintf('Debe proporcionar dos parametros, controlador y planta: sdgui(C, G)\n', nargin);
+    close all force
+    return
+end
+
+handles.arg_C = varargin{1};
+handles.arg_G = varargin{2};
 
 % MY OWN INITIALIZATION
 guidata(hObject, sdfunc.init(handles));

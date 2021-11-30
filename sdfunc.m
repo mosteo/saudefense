@@ -5,7 +5,11 @@
 classdef sdfunc
 % Contains our own GUI-related things, to isolate them somehow from
 % the automatic callbacks created by Matlab
-   
+
+properties(Constant)
+    cmd_line = true
+end
+
 methods(Static)
     
     function common_callback(~, ~) % hObject, eventdata
@@ -29,7 +33,7 @@ methods(Static)
         % Initialize panels
         sdfunc.init_tfpanels(handles);
 
-        % Get TFs
+        % Get TFs        
         [C, G] = sdfunc.gui_LTI_config(handles);        
         
         handles.props.sau = saudefense(handles.battle, ...
@@ -66,7 +70,7 @@ methods(Static)
         sizes = get(0,'screensize');
         width = sizes(3); height = sizes(4);
         if width < 1280 || height < 720
-           errordlg(sprintf(strcat('La resolución de la pantalla debe ser al menos 1280x720.\n', ...
+           errordlg(sprintf(strcat('La resolucion de la pantalla debe ser al menos 1280x720.\n', ...
                                    'Se ha detectado %dx%d'), width, height), ...
                                    'My Error Dialog', 'modal');
            ok = false;
@@ -235,8 +239,13 @@ methods(Static)
     end
 
     function [C, G] = gui_LTI_config(h)
-        C = h.props.widget_controller.get_tf();
-        G = h.props.widget_plant.get_tf();
+        if sdfunc.cmd_line
+            C = h.arg_C;
+            G = h.arg_G;
+        else 
+            C = h.props.widget_controller.get_tf();
+            G = h.props.widget_plant.get_tf();
+        end
     end
     
     function update_difficulty_panel(h)
@@ -390,7 +399,7 @@ methods(Static)
         h = zeros(2, 1);
         h(1) = plot(NaN,NaN,'xb');
         h(2) = plot(NaN,NaN,'xr');
-        legend(h, 'open-loop C(s)·G(s)', 'closed-loop poles');
+        legend(h, 'open-loop C(s)??G(s)', 'closed-loop poles');
         
         title(axe, '');
         %drawnow
