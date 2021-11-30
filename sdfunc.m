@@ -145,10 +145,17 @@ methods(Static)
     end        
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-    function text = trim_tf(G)
+    function text = trim_tf(G, name)
         text = evalc('display(G)');
         text = (strrep(text, 'G =', ''));
-        text = (strrep(text, 'Continuous-time transfer function.', ''));
+        text = (strrep(text, 'Continuous-time transfer function.', ''));        
+        text = sprintf('\n%s =%s', name, text);
+        
+        % Remove "Name:" coming from pzk model exported by sisotool
+        cruft = strfind(text, 'Name:');
+        if cruft > 0
+            text = text(1:cruft-1)
+        end
     end    
     
 
@@ -159,8 +166,8 @@ methods(Static)
         h.text_G.Visible = h.props.cmd_line;
         
         if h.props.cmd_line
-           h.text_C.String = sdfunc.trim_tf(h.props.arg_C);
-           h.text_G.String = sdfunc.trim_tf(h.props.arg_G);
+           h.text_C.String = sdfunc.trim_tf(h.props.arg_C, 'C(s)');
+           h.text_G.String = sdfunc.trim_tf(h.props.arg_G, 'G(s)');
         end
         
         h.difficulty.Enable = enabled;
