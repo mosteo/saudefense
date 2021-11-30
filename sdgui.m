@@ -27,7 +27,7 @@ function varargout = sdgui(varargin)
 
 % Edit the above text to modify the response to help sdgui
 
-% Last Modified by GUIDE v2.5 07-Jan-2019 12:41:21
+% Last Modified by GUIDE v2.5 30-Nov-2021 19:52:41
 
 
 %% MY PRELIMINARY CHECKS, BEFORE GUI
@@ -56,7 +56,7 @@ try
     end
 catch ME
     fprintf(2, '%s\n', getReport(ME, 'extended'));
-    close all force
+    close(gcbf, 'force')
 end
 % End initialization code - DO NOT EDIT
 
@@ -73,8 +73,8 @@ handles.output = hObject;
 
 %% VERIFY ARGUMENTS
 if size(varargin) ~= 2
-    fprintf('Debe proporcionar dos parametros, controlador y planta: sdgui(C, G)\n', nargin);
-    close all force
+    fprintf('Debe proporcionar dos parametros, controlador y planta: sdgui(C, G)\n');
+    close(handles.sdgui_main, 'force')
     return
 end
 
@@ -85,7 +85,7 @@ handles.arg_G = varargin{2};
 guidata(hObject, sdfunc.init(handles));
 
 % UIWAIT makes sdgui wait for user response (see UIRESUME)
-%uiwait(handles.window);
+%uiwait(handles.sdgui_main);
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 
@@ -121,9 +121,9 @@ if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgr
 end
 
 
-% --- Executes on key press with focus on window and none of its controls.
-function window_KeyPressFcn(~, eventdata, handles)
-% hObject    handle to window (see GCBO)
+% --- Executes on key press with focus on sdgui_main and none of its controls.
+function sdgui_main_KeyPressFcn(~, eventdata, handles)
+% hObject    handle to sdgui_main (see GCBO)
 % eventdata  structure with the following fields (see MATLAB.UI.FIGURE)
 %	Key: name of the key that was pressed, in lower case
 %	Character: character interpretation of the key(s) that was pressed
@@ -132,9 +132,9 @@ function window_KeyPressFcn(~, eventdata, handles)
 % handles.props.sau.keyPress(eventdata);
 
 
-% --- Executes on key release with focus on window and none of its controls.
-function window_KeyReleaseFcn(~, eventdata, handles)
-% hObject    handle to window (see GCBO)
+% --- Executes on key release with focus on sdgui_main and none of its controls.
+function sdgui_main_KeyReleaseFcn(~, eventdata, handles)
+% hObject    handle to sdgui_main (see GCBO)
 % eventdata  structure with the following fields (see MATLAB.UI.FIGURE)
 %	Key: name of the key that was released, in lower case
 %	Character: character interpretation of the key(s) that was released
@@ -275,9 +275,9 @@ if isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColo
 end
 
 
-% --- Executes when user attempts to close window.
-function window_CloseRequestFcn(hObject, eventdata, handles)
-% hObject    handle to window (see GCBO)
+% --- Executes when user attempts to close sdgui_main.
+function sdgui_main_CloseRequestFcn(hObject, eventdata, handles)
+% hObject    handle to sdgui_main (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 if handles.props.running
@@ -287,11 +287,11 @@ end
 delete(hObject);
 
 
-function window_DeleteFcn(~,~,~)
+function sdgui_main_DeleteFcn(~,~,~)
 
 
 % --- Executes on mouse motion over figure - except title and menu.
-function window_WindowButtonMotionFcn(hObject, eventdata, handles)
+function sdgui_main_WindowButtonMotionFcn(hObject, eventdata, handles)
 % DOES NOTHING BUT IS NEEDED TO ENABLE FLUID MOUSE COORDS CAPTURE
 % See https://www.mathworks.com/help/matlab/ref/matlab.graphics.axis.axes-properties.html
 

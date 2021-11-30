@@ -64,6 +64,7 @@ properties
     numpad6  = false
     
     auto_aim  = true
+    mouse_aim = false
         
     % SAU things
     loop        % Main loop TF, see i_loop.m
@@ -316,17 +317,19 @@ methods(Access=public)
         end         
         
         % Find closest to mouse
-        mouse   = this.fig.CurrentPoint/this.scale;        
-        cl_dist = Inf;
-        this.man_target = 0;        
-        for i = 1:numel(this.foes)
-            if ~this.foes{i}.alive; continue; end % disintegrating
-            if abs(this.foes{i}.x) > this.W/2*(1-this.BAND); continue; end % Can't target yet
-            d = norm([mouse(1,1) - this.foes{i}.x; ...
-                      mouse(1,2) - this.foes{i}.y]);
-            if d < this.foe_manual_dist && d < cl_dist
-                this.man_target = i;
-                cl_dist = d;
+        if this.mouse_aim
+            mouse   = this.fig.CurrentPoint/this.scale;        
+            cl_dist = Inf;
+            this.man_target = 0;        
+            for i = 1:numel(this.foes)
+                if ~this.foes{i}.alive; continue; end % disintegrating
+                if abs(this.foes{i}.x) > this.W/2*(1-this.BAND); continue; end % Can't target yet
+                d = norm([mouse(1,1) - this.foes{i}.x; ...
+                          mouse(1,2) - this.foes{i}.y]);
+                if d < this.foe_manual_dist && d < cl_dist
+                    this.man_target = i;
+                    cl_dist = d;
+                end
             end
         end
         
