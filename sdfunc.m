@@ -154,16 +154,16 @@ methods(Static)
         % Remove "Name:" coming from pzk model exported by sisotool
         cruft = strfind(text, 'Name:');
         if cruft > 0
-            text = text(1:cruft-1)
+            text = text(1:cruft-1);
         end
     end    
     
 
-    function enable_all(h, enable)
+    function enable_all(h, enable, visible_override)
         enabled = sdconst.onoff(enable);
                 
-        h.text_C.Visible = h.props.cmd_line;
-        h.text_G.Visible = h.props.cmd_line;
+        h.text_C.Visible = visible_override & h.props.cmd_line;
+        h.text_G.Visible = visible_override & h.props.cmd_line;
         
         if h.props.cmd_line
            h.text_C.String = sdfunc.trim_tf(h.props.arg_C, 'C(s)');
@@ -172,7 +172,7 @@ methods(Static)
         
         h.difficulty.Enable = enabled;
         h.pop_controller.Enable = enabled;
-        h.pop_controller.Visible = ~h.props.cmd_line;
+        h.pop_controller.Visible = visible_override & ~h.props.cmd_line;
         
         if h.props.league
             enable_plant = 'off';            
@@ -180,19 +180,19 @@ methods(Static)
             enable_plant = enable;
         end
         h.pop_plant.Enable = enable_plant;
-        h.pop_plant.Visible = ~h.props.cmd_line;
+        h.pop_plant.Visible = visible_override & ~h.props.cmd_line;
         
         for w=allchild(h.p_plant)'
             if isprop(w, 'Enable')
                 w.Enable = enable_plant;
-                w.Visible = ~h.props.cmd_line;
+                w.Visible = visible_override & ~h.props.cmd_line;
             end
         end
         
         for w=allchild(h.p_controller)'
             if isprop(w, 'Enable')
                 w.Enable = enabled;
-                w.Visible = ~h.props.cmd_line;
+                w.Visible = visible_override & ~h.props.cmd_line;
             end
         end        
     end
@@ -215,15 +215,15 @@ methods(Static)
         if h.props.running
             if compete
                 h.compete.String = 'Pause';
-                sdfunc.enable_all(h, false);
+                sdfunc.enable_all(h, false, true);
             else
                 h.start.String = 'Pause';
-                sdfunc.enable_all(h, true);
+                sdfunc.enable_all(h, true, true);
             end            
         else
             h.start.String = 'Test';
             h.compete.String = 'Competition';
-            sdfunc.enable_all(h, true);
+            sdfunc.enable_all(h, true, true);
         end
         
         % Reset if competing for the first time after test
@@ -247,7 +247,7 @@ methods(Static)
             done = sdfunc.looper(h);
             
             if done && h.props.competing
-                sdfunc.enable_all(h, true);
+                sdfunc.enable_all(h, true, true);
                 msgbox({sprintf('Final score: %d points', h.props.sau.score), ...
                         sprintf('Time survived: %.2f seconds', ...
                             h.props.sau.iterations * h.props.sau.T)});                
@@ -426,7 +426,7 @@ methods(Static)
     end
     
     function update_LTI(h)        
-        sdfunc.enable_all(h, false);
+        sdfunc.enable_all(h, false, false);
         h.start.Enable = 'off';
         h.compete.Enable = 'off';
         
@@ -462,7 +462,7 @@ methods(Static)
 
         h.updating.Visible = 'off';
         drawnow
-        sdfunc.enable_all(h, ~h.props.competing);
+        sdfunc.enable_all(h, ~h.props.competing, true);
         h.start.Enable   = sdconst.onoff(~h.props.running || ~h.props.competing);
         h.compete.Enable = sdconst.onoff(~h.props.running || h.props.competing);
     end
