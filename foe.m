@@ -6,6 +6,8 @@ classdef foe < i_body & i_drawable & i_killable
 % TODO: split bomb & missile into different classes    
     
 properties(Constant)
+    MAGIC_SPEED = 11.1; % multiplier for bombs based on plant poles
+    
     vy_max = 4;
     default_accel  = 9.8;
     dying_len = 2;
@@ -79,7 +81,7 @@ methods(Access=public)
                 if props.cmd_line                    
                     % Proportional to "response time" of the plant
                     this.vy = -sum(pole(G))/numel(pole(G))* ...
-                        13; % Magic number so it is something normal...
+                        foe.MAGIC_SPEED; % Magic number so it is something normal...
                 else
                     this.vy = -1;
                 end
