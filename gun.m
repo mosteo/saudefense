@@ -161,7 +161,8 @@ methods
         
         % Autofire (once armed is computed)
         if this.autofire && this.armed && this.has_target() && ...
-                this.target.check_hit(this.x, this.y, pi/2)
+                true % fire once Ts is elapsed
+                % this.target.check_hit(this.x, this.y, pi/2)                
             this.firing = this.firing_len;
             this.armed  = false;
         end 
